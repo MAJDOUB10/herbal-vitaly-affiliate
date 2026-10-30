@@ -13,7 +13,9 @@ export async function GET(
     // The partner always lands on the actual Shopify shop, never the dashboard.
     // Deep links are only allowed to the same Herbal Vitaly storefront.
     const rawTarget = searchParams.get('dest') || searchParams.get('target');
-    const targetUrl = shopifyAffiliateDestination(rawTarget).toString();
+    const storefrontTarget = shopifyAffiliateDestination(rawTarget);
+    const targetUrl = storefrontTarget.toString();
+    const promo = searchParams.get('promo')?.trim().toUpperCase() || null;
 
     // Find affiliate by referral code using Prisma
     const affiliate = await prisma.affiliate.findUnique({
@@ -107,7 +109,7 @@ export async function GET(
     // Preserve existing search params on the target URL (important for deep linking)
     searchParams.forEach((value, key) => {
       // Don't override existing ref/attr if they happen to be there, and don't pass dest/target again
-      if (!['ref', 'attr', 'dest', 'target', 'hv_ref', 'hv_attr', 'hv_token'].includes(key)) {
+      if (!['ref', 'attr', 'dest', 'target', 'promo', 'hv_ref', 'hv_attr', 'hv_token'].includes(key)) {
         redirectUrl.searchParams.set(key, value);
       }
     });
@@ -121,7 +123,29 @@ export async function GET(
     if (!redirectUrl.searchParams.has('utm_medium')) redirectUrl.searchParams.set('utm_medium', 'partner');
     if (!redirectUrl.searchParams.has('utm_campaign')) redirectUrl.searchParams.set('utm_campaign', 'affiliate');
 
-    const response = NextResponse.redirect(redirectUrl.toString());
+    // Promo links can only apply an ACTIVE Shopify discount assigned to this
+    // exact partner and the selected Shopify product. All signed tracking
+    // parameters are embedded in Shopify's redirect destination, so the product
+    // page receives them after Shopify applies the discount.
+    let finalTarget = redirectUrl.toString();
+    if (promo && redirectUrl.pathname.startsWith('/products/')) {
+      const handle = decodeURIComponent(redirectUrl.pathname.slice('/products/'.length));
+      const coupon = await prisma.coupon.findFirst({
+        where: { code: promo, affiliateId: affiliate.id, source: 'SHOPIFY',
+          isActive: true, shopifyStatus: 'ACTIVE',
+          shopifyProductHandles: { has: handle },
+          startsAt: { lte: new Date() },
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+        select: { code: true },
+      });
+      if (coupon) {
+        const path = redirectUrl.pathname + redirectUrl.search;
+        finalTarget = 'https://herbalvitaly.com/discount/' + encodeURIComponent(coupon.code) +
+          '?redirect=' + encodeURIComponent(path);
+      }
+    }
+
+    const response = NextResponse.redirect(finalTarget);
 
     // Set attribution cookie (expires in 30 days)
     const cookieExpiry = new Date();
