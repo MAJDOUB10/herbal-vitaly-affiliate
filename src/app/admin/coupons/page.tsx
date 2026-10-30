@@ -54,6 +54,7 @@ export default function CouponsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Coupon | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
   const [form, setForm] = useState({
     code: '', description: '', discountType: 'PERCENTAGE', discountValue: '',
@@ -110,7 +111,27 @@ export default function CouponsPage() {
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError('');
     try {
+      if (editing?.source === 'SHOPIFY') {
+        const affiliateId = form.affiliateId || null;
+        const res = await fetch('/api/admin/coupons/assign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            couponId: editing.id,
+            affiliateId,
+            expectedAffiliateId: editing.affiliateId || null,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.error || 'Association impossible');
+        await fetchCoupons();
+        closeDialog();
+        setAssignMessage(`Attribution du code ${editing.code} enregistrée. Aucune commission créée.`);
+        return;
+      }
+
       const payload: any = {
         code: form.code,
         description: form.description || null,
@@ -126,12 +147,12 @@ export default function CouponsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (res.ok) {
-        await fetchCoupons();
-        closeDialog();
-      }
+      const result = await res.json();
+      if (!res.ok || !result.success) throw new Error(result.error || 'Échec de l’enregistrement');
+      await fetchCoupons();
+      closeDialog();
     } catch (error) {
-      console.error('Failed to save coupon:', error);
+      setSaveError(error instanceof Error ? error.message : 'Échec de l’enregistrement');
     } finally {
       setSaving(false);
     }
@@ -165,6 +186,7 @@ export default function CouponsPage() {
   };
 
   const openEdit = (c: Coupon) => {
+    setSaveError('');
     setEditing(c);
     setForm({
       code: c.code,
@@ -179,6 +201,7 @@ export default function CouponsPage() {
   };
 
   const closeDialog = () => {
+    setSaveError('');
     setDialogOpen(false);
     setEditing(null);
     setForm({ code: '', description: '', discountType: 'PERCENTAGE', discountValue: '', maxUses: '', affiliateId: '', expiresAt: '' });
@@ -336,7 +359,12 @@ export default function CouponsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {c.source === 'SHOPIFY' ? <span className="text-xs text-muted-foreground" title="Manage this code in Shopify Discounts">Managed in Shopify</span> : <>
+                        {c.source === 'SHOPIFY' ? <>
+                          <Button variant="outline" size="sm" onClick={() => openEdit(c)}>
+                            Associer
+                          </Button>
+                          <span className="text-xs text-muted-foreground" title="Les remises sont gérées uniquement dans Shopify">Remise Shopify</span>
+                        </> : <>
                           <Button variant="ghost" size="icon" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </>}
@@ -353,12 +381,20 @@ export default function CouponsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editing ? 'Edit Coupon' : 'Create Coupon'}</DialogTitle>
+            <DialogTitle>{editing?.source === 'SHOPIFY' ? 'Associer un partenaire Refferq' : editing ? 'Modifier le coupon' : 'Créer un coupon'}</DialogTitle>
             <DialogDescription>
-              {editing ? 'Update coupon details' : 'Create a new discount code for affiliates or customers'}
+              {editing?.source === 'SHOPIFY'
+                ? 'Seule l’association au partenaire sera enregistrée. Le code et la réduction Shopify restent inchangés.'
+                : editing ? 'Modifier le coupon Refferq' : 'Créer un coupon Refferq'}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {editing?.source === 'SHOPIFY' ? (
+              <div className="grid gap-2">
+                <Label>Code Shopify</Label>
+                <Input value={editing.code} readOnly className="font-mono" />
+              </div>
+            ) : (<>
             <div className="grid gap-2">
               <Label>Coupon Code *</Label>
               <Input value={form.code} onChange={e => setForm({...form, code: e.target.value.toUpperCase()})} placeholder="SAVE20" className="font-mono" />
@@ -393,15 +429,36 @@ export default function CouponsPage() {
                 <Input type="date" value={form.expiresAt} onChange={e => setForm({...form, expiresAt: e.target.value})} />
               </div>
             </div>
+            </>)}
             <div className="grid gap-2">
-              <Label>Affiliate ID (optional)</Label>
-              <Input value={form.affiliateId} onChange={e => setForm({...form, affiliateId: e.target.value})} placeholder="Leave empty for program-wide coupon" />
+              <Label>Partenaire affilié (facultatif)</Label>
+              <Select value={form.affiliateId || '__none'}
+                onValueChange={value => setForm(prev => ({ ...prev, affiliateId: value === '__none' ? '' : value }))}>
+                <SelectTrigger aria-label="Sélectionner un partenaire affilié">
+                  <SelectValue placeholder="Choisir un partenaire" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Non attribué — aucune commission affilié</SelectItem>
+                  {partners.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.name} ({p.referralCode})</SelectItem>
+                  ))}
+                  {form.affiliateId && !partners.some(p => p.id === form.affiliateId) && (
+                    <SelectItem value={form.affiliateId} disabled>Partenaire non approuvé — retirer l’attribution</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Seuls les partenaires actifs, approuvés et avec e-mail vérifié sont proposés.
+              </p>
+              {partners.length === 0 && <p className="text-sm text-amber-700">Aucun partenaire approuvé disponible.</p>}
             </div>
+            {saveError && <p className="text-sm text-red-600" role="alert">{saveError}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving || !form.code || !form.discountValue}>
-              {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
+            <Button onClick={handleSave}
+              disabled={saving || (!editing && (!form.code || !form.discountValue)) || (editing?.source !== 'SHOPIFY' && (!form.code || !form.discountValue))}>
+              {saving ? 'Enregistrement...' : editing?.source === 'SHOPIFY' ? 'Enregistrer l’association' : editing ? 'Mettre à jour' : 'Créer'}
             </Button>
           </DialogFooter>
         </DialogContent>
