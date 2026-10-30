@@ -75,10 +75,20 @@ interface Referral {
   createdAt: string;
 }
 
+interface ShopifyTrackedOrder {
+  id: string;
+  orderName: string;
+  totalEGP: string;
+  currency: string;
+  updatedAt: string;
+  status: string;
+}
+
 export default function AffiliateDashboard() {
   const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<AffiliateStats | null>(null);
   const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [shopifyOrders, setShopifyOrders] = useState<ShopifyTrackedOrder[]>([]);
   const [currencySymbol, setCurrencySymbol] = useState('E£');
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -96,6 +106,10 @@ export default function AffiliateDashboard() {
   useEffect(() => {
     if (!authLoading && user) {
       loadDashboardData();
+      fetch('/api/affiliate/shopify-orders', { cache: 'no-store' })
+        .then(response => response.ok ? response.json() : null)
+        .then(result => { if (result?.success) setShopifyOrders(result.orders || []); })
+        .catch(() => { /* Order tracking is informational; never block dashboard. */ });
     }
   }, [authLoading, user]);
 
@@ -338,7 +352,7 @@ export default function AffiliateDashboard() {
           ) : (
             <>
               <div className="space-y-2">
-                <Label>Referral Link</Label>
+                <Label>Referral Link — Herbal Vitaly Shop</Label>
                 <div className="flex gap-2">
                   <Input readOnly value={stats?.referralLink || ''} className="font-mono text-sm" />
                   <Button
@@ -349,6 +363,10 @@ export default function AffiliateDashboard() {
                     {copied === 'link' ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  This link sends customers to herbalvitaly.com and tracks partner visits. Shopify
+                  orders appear below after storefront cart tracking and secure webhook setup.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Referral Code</Label>
@@ -364,6 +382,50 @@ export default function AffiliateDashboard() {
                 </div>
               </div>
             </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Shopify tracking — read-only orders, not commission approvals. */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Shopify Orders — Herbal Vitaly</CardTitle>
+          <CardDescription>
+            Orders attributed to your referral code. COD delivery, collection and finance
+            checks are required before any commission is approved.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {shopifyOrders.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No linked Shopify orders yet. Share your referral link above; completed orders
+              will appear here after Shopify tracking and webhook integration are activated.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {shopifyOrders.map(order => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.orderName}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(order.updatedAt).toLocaleDateString('en-EG')}
+                      </TableCell>
+                      <TableCell><Badge variant="outline">{order.status.replaceAll('_', ' ')}</Badge></TableCell>
+                      <TableCell className="text-right">{order.totalEGP} EGP</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
