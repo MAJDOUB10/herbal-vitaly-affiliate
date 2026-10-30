@@ -1,43 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { otpService } from '@/lib/otp';
-import { SignJWT } from 'jose';
+import { prisma } from '@/lib/prisma';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { normalizeLoginEmail, isValidLoginEmail, hashedLoginIdentifier } from '@/lib/password-auth-policy';
 
+/** OTP is used only to verify a NEW account. It never grants a login session. */
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown';
-    const rate = await checkRateLimit(ip, 'auth/verify-otp', 5, 60_000);
-    if (!rate.allowed) return NextResponse.json({ success: false, error: 'Too many attempts' }, { status: 429 });
+    if (!process.env.JWT_SECRET) return NextResponse.json({ success: false, error: 'Verification unavailable' }, { status: 503 });
     const body = await request.json();
-    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-    const code = typeof body.code === 'string' ? body.code.trim() : '';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !/^\d{6}$/.test(code)) {
+    const email = normalizeLoginEmail(body?.email);
+    const code = body?.code;
+    if (!isValidLoginEmail(email) || typeof code !== 'string' || !/^\d{6}$/.test(code))
       return NextResponse.json({ success: false, error: 'Invalid code' }, { status: 400 });
-    }
+
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const [one, two] = await Promise.all([
+      checkRateLimit(ip, 'auth/verify-registration-ip', 5, 60_000),
+      checkRateLimit(hashedLoginIdentifier(email, process.env.JWT_SECRET), 'auth/verify-registration-account', 8, 15 * 60_000),
+    ]);
+    if (!one.allowed || !two.allowed) return NextResponse.json({ success: false, error: 'Too many attempts' }, { status: 429 });
+
+    // Prevent this legacy OTP route from becoming an alternate passwordless login.
+    const account = await prisma.user.findUnique({ where: { email }, select: { status: true } });
+    if (!account || account.status !== 'PENDING')
+      return NextResponse.json({ success: false, error: 'Account verification unavailable' }, { status: 400 });
+
     const result = await otpService.verifyOTP(email, code);
     if (!result.success) return NextResponse.json({ success: false, error: result.message }, { status: 400 });
-
-    if (result.pendingApproval) {
-      // Verify ownership; do NOT issue an authentication session before admin approval.
-      return NextResponse.json({ success: true, pendingApproval: true, message: result.message });
-    }
-    const user = result.user;
-    if (!user || user.status !== 'ACTIVE' || !process.env.JWT_SECRET) {
-      return NextResponse.json({ success: false, error: 'Account not active' }, { status: 403 });
-    }
-    const token = await new SignJWT({ userId: user.id, role: user.role, email: user.email, name: user.name })
-      .setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('24h')
-      .sign(new TextEncoder().encode(process.env.JWT_SECRET));
-    const response = NextResponse.json({
+    return NextResponse.json({
       success: true,
-      pendingApproval: false,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, hasAffiliate: user.role === 'AFFILIATE' },
-    });
-    response.cookies.set('auth-token', token, {
-      httpOnly: true, secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax', maxAge: 86400, path: '/',
-    });
-    return response;
+      pendingApproval: Boolean(result.pendingApproval),
+      message: result.pendingApproval
+        ? 'Email verified. Await administrator approval before signing in.'
+        : 'Email verified. Sign in with the password you created.',
+    }, { headers: { 'Cache-Control': 'no-store' } });
   } catch {
     return NextResponse.json({ success: false, error: 'Verification failed' }, { status: 500 });
   }
