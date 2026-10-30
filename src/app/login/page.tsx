@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { BrandIdentity } from '@/components/brand/BrandIdentity';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +22,7 @@ import {
   InputOTPSeparator,
 } from '@/components/ui/input-otp';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Target, Mail, ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
+import { Mail, ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
 
 type Step = 'email' | 'otp';
 
@@ -125,21 +126,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
+    <div className="hv-auth-shell">
       <div className="w-full max-w-md space-y-6">
-        {/* Logo & Branding */}
-        <div className="text-center space-y-2">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/25">
-            <Target className="h-7 w-7 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">Refferq</h1>
-          <p className="text-sm text-muted-foreground">
-            Affiliate Marketing Platform
-          </p>
-        </div>
+        {/* Official Herbal Vitaly identity */}
+        <BrandIdentity />
 
         {/* Login Card */}
-        <Card className="border-0 shadow-xl shadow-black/5">
+        <Card className="hv-auth-card">
           {step === 'email' ? (
             <>
               <CardHeader className="text-center pb-4">
