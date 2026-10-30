@@ -565,6 +565,7 @@ model Coupon {
   shopifySummary  String?       @map("shopify_summary")
   shopifyStatus   String?       @map("shopify_status")
   shopifySyncedAt DateTime?     @map("shopify_synced_at")
+  shopifyProductIds String[]   @default([]) @map("shopify_product_ids")
   createdBy       String       @map("created_by")
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
