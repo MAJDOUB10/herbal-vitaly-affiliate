@@ -93,7 +93,9 @@ export async function POST(request: NextRequest) {
         discountType: discountType as string, discountValue, currency: 'EGP',
         maxUses, affiliateId, startsAt, expiresAt,
         source: 'REFFERQ_PENDING', isActive: false, shopifyStatus: 'PENDING',
-        shopifyProductIds: productIds, createdBy: user.id,
+        shopifyProductIds: productIds,
+        shopifyProductHandles: productIds.map(id => productMap.get(id)!.handle),
+        createdBy: user.id,
       },
     });
     reservedId = reservation.id;
