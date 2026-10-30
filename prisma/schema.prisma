@@ -701,6 +701,10 @@ model HvCodOrder {
   orderTotalPiasters          Int
   commissionPreviewPiasters   Int
   referralCode                String?
+  affiliateId                 String?  @map("affiliate_id")
+  attributionSource           String   @default("UNVERIFIED") @map("attribution_source")
+  discountCode                String?  @map("discount_code")
+  attributionKey              String?  @map("attribution_key")
   isCod                       Boolean  @default(false)
   cancelled                   Boolean  @default(false)
   refunded                    Boolean  @default(false)
@@ -718,6 +722,8 @@ model HvCodOrder {
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
 
+  @@index([affiliateId, shopifyUpdatedAt])
+  @@index([attributionSource])
   @@map("hv_cod_orders")
 }
 
