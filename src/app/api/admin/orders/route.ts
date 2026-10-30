@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { orderStatus } from '@/lib/hv-order-attribution';
 
 /** Admin-only, read-only and PII-minimized Shopify order tracking. */
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
     const source = qs.get('source') || '';
     const search = (qs.get('search') || '').trim().slice(0, 80);
     const sourceOptions = ['AFFILIATE_LINK', 'PROMO_CODE', 'LINK_AND_PROMO', 'UNATTRIBUTED', 'UNVERIFIED', 'CONFLICT'];
-    const where: Record<string, unknown> = {};
+    const where: Prisma.HvCodOrderWhereInput = {};
     if (affiliateId) where.affiliateId = affiliateId;
     if (sourceOptions.includes(source)) where.attributionSource = source;
     if (search) where.OR = [
