@@ -12,7 +12,7 @@
 
 ## Security and rollout gate (important)
 1. App requires `SHOPIFY_ADMIN_ACCESS_TOKEN` (Shopify custom app, `read_products`, `read_discounts`, `write_discounts`) and `SHOPIFY_SHOP_DOMAIN=kk20pd-es.myshopify.com` configured as **server-only Vercel environment variables for the reviewed Preview branch**.
-2. **The necessary Admin API token is not yet present** in the Vercel project. Without it the product picker shows an explicit setup error and the server refuses discount writes. Never paste tokens into chat or GitHub.
+2. **Neither the Dev Dashboard client credentials nor a legacy Admin API token are currently present** in the Vercel project. Without it the product picker shows an explicit setup error and the server refuses discount writes. Never paste tokens into chat or GitHub.
 3. Coupon POST is intentionally locked to `VERCEL_ENV=preview` until all checks are completed; it cannot silently create discounts from unreviewed Production.
 4. This Shopify account is a live Egypt storefront: creating a coupon with active `startsAt` affects real checkout prices. Use an internal QA code with a strict usage limit and verified product, then revoke after testing.
 5. The theme snippet for referral tracking remains on the **unpublished** Shopify theme copy, so live orders may not capture the attribution token until published after consent + checkout QA.
