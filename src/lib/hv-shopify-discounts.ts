@@ -1,6 +1,7 @@
 /**
  * Shopify Admin API is invoked server-side. The Vercel project MUST have
- * SHOPIFY_ADMIN_ACCESS_TOKEN with read_products and write_discounts scopes.
+ * either legacy SHOPIFY_ADMIN_ACCESS_TOKEN or SHOPIFY_CLIENT_ID +
+ * SHOPIFY_CLIENT_SECRET (Dev Dashboard app) with product and discount scopes.
  * No token must ever reach client components, logs or GitHub.
  */
 const SHOP = 'kk20pd-es.myshopify.com';
@@ -58,15 +59,47 @@ export function buildBasicDiscountInput(data: DiscountInput): Record<string, unk
   };
 }
 
-function shopCredentials(): string {
-  const key = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN;
+type AuthCache = { token: string; expiresAt: number };
+let cachedShopifyAccess: AuthCache | null = null;
+
+/**
+ * Supports both a legacy custom app access token and modern Shopify Dev
+ * Dashboard credentials. The client_credentials token expires in ~24 hours.
+ * The latter requires app and store under the SAME Shopify organization.
+ */
+async function shopCredentials(): Promise<string> {
   const shop = process.env.SHOPIFY_SHOP_DOMAIN;
-  if (!key || shop !== SHOP)
-    throw new Error('Shopify Admin API integration not configured for the expected shop');
-  return key;
+  if (shop !== SHOP) throw new Error('Incorrect Shopify shop configuration');
+  const legacy = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN;
+  if (legacy) return legacy;
+  const clientId = process.env.SHOPIFY_CLIENT_ID;
+  const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
+  if (!clientId || !clientSecret)
+    throw new Error('Shopify app credentials not configured in Vercel');
+  if (cachedShopifyAccess && cachedShopifyAccess.expiresAt > Date.now() + 300000)
+    return cachedShopifyAccess.token;
+  const resp = await fetch('https://' + SHOP + '/admin/oauth/access_token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'client_credentials', client_id: clientId, client_secret: clientSecret,
+    }),
+    cache: 'no-store', signal: AbortSignal.timeout(15000),
+  });
+  if (!resp.ok) throw new Error('Shopify credentials grant failed; verify app installation and organization');
+  const data = await resp.json() as { access_token?: string; scope?: string; expires_in?: number };
+  const scopes = (data.scope || '').split(',');
+  if (!data.access_token || !scopes.includes('read_products') || !scopes.includes('write_discounts'))
+    throw new Error('Shopify application is missing read_products or write_discounts approval');
+  cachedShopifyAccess = {
+    token: data.access_token,
+    expiresAt: Date.now() + Math.max(60, Math.min(data.expires_in || 3600, 86400)) * 1000,
+  };
+  return cachedShopifyAccess.token;
 }
+
 export async function shopifyAdminGraphQL<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
-  const accessToken = shopCredentials();
+  const accessToken = await shopCredentials();
   const response = await fetch('https://' + SHOP + '/admin/api/' + API_VERSION + '/graphql.json', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Shopify-Access-Token': accessToken },
