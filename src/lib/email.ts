@@ -133,11 +133,15 @@ class EmailService {
       const { Resend } = await import('resend');
       const resend = new Resend(process.env.RESEND_API_KEY);
 
+      const brandHeader = '<div style="padding:16px 24px;text-align:center;background:#ffffff;border-bottom:1px solid #E4EBE6"><img src="https://cdn.shopify.com/s/files/1/1003/9420/5506/files/herbal-vitaly-affiliate-official-logo.png?v=1793365508" alt="Herbal Vitaly — Let nature be your medicine" width="152" style="width:152px;max-width:100%;height:auto" /></div>';
+      const brandedHtml = /<body[^>]*>/i.test(params.html)
+        ? params.html.replace(/(<body[^>]*>)/i, '$1' + brandHeader)
+        : brandHeader + params.html;
       const result = await resend.emails.send({
         from: this.defaultFrom,
         to: params.to,
         subject: params.subject,
-        html: params.html,
+        html: brandedHtml,
       });
 
       return { success: true, message: 'Email sent successfully' };
