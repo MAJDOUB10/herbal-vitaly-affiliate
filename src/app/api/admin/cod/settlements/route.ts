@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     orderTotalPiasters:o.orderTotalPiasters,referralCode:o.referralCode,
     bostaState:o.bostaState,delivered:o.delivered,courierCollected:o.courierCollected,
     merchantReconciled:o.merchantReconciled,settlementReference:o.merchantSettlementReference,
-    ...previewCodCommission({...o,affiliateApproved:Boolean(o.affiliateId) && approvedIds.has(o.affiliateId) && ['AFFILIATE_LINK','PROMO_CODE','LINK_AND_PROMO'].includes(o.attributionSource)})
+    ...previewCodCommission({...o,affiliateApproved:!!o.affiliateId && approvedIds.has(o.affiliateId) && ['AFFILIATE_LINK','PROMO_CODE','LINK_AND_PROMO'].includes(o.attributionSource)})
   }))});
 }
 export async function POST(req: NextRequest) {
