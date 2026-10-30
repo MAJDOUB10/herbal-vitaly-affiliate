@@ -6,6 +6,7 @@ export const metadata = {
   title: 'Herbal Vitaly Affiliate Hub',
   description: 'Herbal Vitaly Partner & Affiliate Hub — Let nature be your medicine.',
   icons: { icon: 'https://cdn.shopify.com/s/files/1/1003/9420/5506/files/herbal-vitaly-affiliate-official-logo.png?v=1793365508' },
+  openGraph: { title: 'Herbal Vitaly Affiliate Hub', description: 'Let nature be your medicine', images: [{ url: 'https://cdn.shopify.com/s/files/1/1003/9420/5506/files/herbal-vitaly-affiliate-official-logo.png?v=1793365508', alt: 'Herbal Vitaly official logo' }] },
 };
 
 export default async function RootLayout({
