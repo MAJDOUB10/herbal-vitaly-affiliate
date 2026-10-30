@@ -1,16 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isApprovedAffiliate } from '@/lib/hv-coupon-assignment';
 
 async function verifyAdmin(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id');
     if (!userId) return null;
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user || user.role !== 'ADMIN') return null;
+    if (!user || user.role !== 'ADMIN' || user.status !== 'ACTIVE') return null;
     return user;
   } catch (_e) {
     return null;
   }
+}
+
+
+async function validatePartnerSelection(affiliateId: unknown) {
+  if (affiliateId === null || affiliateId === undefined || affiliateId === '') return { id: null, valid: true };
+  if (typeof affiliateId !== 'string' || affiliateId.length > 100)
+    return { id: null, valid: false };
+  const affiliate = await prisma.affiliate.findUnique({
+    where: { id: affiliateId },
+    select: { user: { select: { role: true, status: true, emailVerifiedAt: true } } },
+  });
+  if (!affiliate || !isApprovedAffiliate(affiliate.user))
+    return { id: null, valid: false };
+  return { id: affiliateId, valid: true };
 }
 
 // GET: List all coupons
@@ -43,6 +58,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Code and discount value are required' }, { status: 400 });
     }
 
+    const partner = await validatePartnerSelection(affiliateId);
+    if (!partner.valid) return NextResponse.json({ error: 'Partenaire non approuvé ou non vérifié' }, { status: 422 });
+
     // Check unique
     const existing = await prisma.coupon.findUnique({ where: { code: code.toUpperCase() } });
     if (existing) {
@@ -57,7 +75,7 @@ export async function POST(request: NextRequest) {
         discountValue,
         currency: currency || 'EGP',
         maxUses: maxUses || null,
-        affiliateId: affiliateId || null,
+        affiliateId: partner.id,
         startsAt: startsAt ? new Date(startsAt) : null,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         createdBy: user.id,
@@ -93,6 +111,11 @@ export async function PUT(request: NextRequest) {
     const updates: Record<string, any> = {};
     for (const key of allowedFields) {
       if (key in body && body[key] !== undefined) updates[key] = body[key];
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'affiliateId')) {
+      const partner = await validatePartnerSelection(body.affiliateId);
+      if (!partner.valid) return NextResponse.json({ error: 'Partenaire non approuvé ou non vérifié' }, { status: 422 });
+      updates.affiliateId = partner.id;
     }
     if (updates.expiresAt) updates.expiresAt = new Date(updates.expiresAt);
     if (updates.startsAt) updates.startsAt = new Date(updates.startsAt);
