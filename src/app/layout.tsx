@@ -1,6 +1,5 @@
 import React from 'react';
 import { Toaster } from '@/components/ui/sonner';
-import { db } from '@/lib/prisma';
 import './globals.css';
 
 export const metadata = {
@@ -14,14 +13,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  let settings = null;
-  try {
-    settings = await db.getPlatformSettings();
-  } catch {
-    // DB unavailable (e.g. during Docker build prerendering) — use defaults
-  }
-
-  // Create dynamic styles based on settings
+  // The corporate brand color is fixed across authentication and dashboards
   const dynamicStyles = {
     '--primary': hexToHSL('#1F6B3A'),
     '--radius': '0.5rem',
