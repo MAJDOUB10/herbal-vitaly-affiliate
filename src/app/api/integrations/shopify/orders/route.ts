@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { normalizeShopifyOrder, verifyShopifyHmac } from '@/lib/hv-cod-connector';
+import { verifiedShopifyOrderAttribution } from '@/lib/hv-shopify-attribution';
 
 // Only receives Shopify order status snapshots. It never creates or approves
 // commissions or changes balances. Enable subscriptions only after credentials
@@ -26,7 +27,25 @@ export async function POST(request: NextRequest) {
   if (!['orders/create', 'orders/updated', 'orders/cancelled'].includes(topic || '') || !deliveryId || deliveryId.length > 128)
     return NextResponse.json({ error: 'Unsupported topic or missing delivery ID' }, { status: 422 });
   try {
-    const order = normalizeShopifyOrder(JSON.parse(raw));
+    const payload = JSON.parse(raw);
+    const order = normalizeShopifyOrder(payload);
+    const tokenSecret = process.env.HV_ATTRIBUTION_SECRET || process.env.JWT_SECRET || '';
+    const verified = verifiedShopifyOrderAttribution(payload, tokenSecret);
+
+    // The browser's cart attributes are untrusted. The signed token must
+    // be valid AND its owner must still be an approved, active affiliate.
+    // Unmapped discount codes stay as legacy review-only references.
+    let verifiedReferralCode: string | null = null;
+    if (verified) {
+      const owner = await prisma.affiliate.findUnique({
+        where: { referralCode: verified.referralCode },
+        select: { user: { select: { role: true, status: true, emailVerifiedAt: true } } },
+      });
+      if (owner?.user.role === 'AFFILIATE' &&
+          owner.user.status === 'ACTIVE' && owner.user.emailVerifiedAt) {
+        verifiedReferralCode = verified.referralCode;
+      }
+    }
     const dedupeKey = 'shopify:' + deliveryId;
     const result = await prisma.$transaction(async (tx) => {
       const existing = await tx.hvCodOrder.findUnique({ where: { shopifyOrderId: order.shopifyOrderId } });
@@ -44,7 +63,7 @@ export async function POST(request: NextRequest) {
         orderTotalPiasters: order.orderTotalPiasters,
         commissionPreviewPiasters: order.commissionPreviewPiasters,
         isCod: order.isCod, cancelled, refunded: order.refunded,
-        referralCode: order.referralCode,
+        referralCode: verifiedReferralCode || order.referralCode,
         shopifyUpdatedAt: order.shopifyUpdatedAt,
         merchantReconciled: Boolean(existing?.merchantReconciled) && !changed && !cancelled && !order.refunded,
       };
