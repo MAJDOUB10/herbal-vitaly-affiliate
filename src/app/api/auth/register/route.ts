@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { otpService } from '@/lib/otp';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { randomBytes } from 'node:crypto';
 import * as bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { canBootstrapFirstAdmin, normalizeAffiliateEmail } from '@/lib/affiliate-auth-policy';
+import { isAcceptablePassword } from '@/lib/password-auth-policy';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,10 +18,16 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const name = typeof body.name === 'string' ? body.name.trim() : '';
+    const password = body.password;
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
     if (name.length < 2 || name.length > 100 || email.length > 254 ||
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ success: false, message: 'Enter a valid name and email address' }, { status: 400 });
+    }
+
+    if (!isAcceptablePassword(password)) {
+      return NextResponse.json({ success: false,
+        message: 'Password must contain 12 to 128 characters' }, { status: 400 });
     }
 
     const allowedAdminEmails = (process.env.ADMIN_EMAILS || '').split(',')
@@ -43,22 +49,22 @@ export async function POST(request: NextRequest) {
       }
       // Public input can never specify a role; a server-only allowlist decides.
       // Admin remains PENDING until the owner proves inbox possession via OTP.
-      const password = await bcrypt.hash(randomBytes(32).toString('base64url'), 12);
+      const passwordHash = await bcrypt.hash(password, 12);
       try {
         await prisma.user.create({
-          data: { name, email, password, role: 'ADMIN', status: 'PENDING' },
+          data: { name, email, password: passwordHash, role: 'ADMIN', status: 'PENDING' },
         });
       } catch {
         return NextResponse.json({
           success: false,
-          message: 'This administrator email is already registered. Use the sign-in page to request an OTP.',
+          message: 'This account already exists. Use sign-in or password recovery.',
         }, { status: 409 });
       }
     } else {
       // Ordinary public registration is always an affiliate, never an admin.
       const created = await auth.register({
         name, email, role: 'AFFILIATE',
-        password: randomBytes(32).toString('base64url'),
+        password,
       });
       if (!created.success) {
         return NextResponse.json({ success: false, message: created.message }, { status: 400 });
