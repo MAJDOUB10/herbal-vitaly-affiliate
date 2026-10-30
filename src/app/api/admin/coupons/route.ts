@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     if (await getShopifyDiscountByCode(code))
       return NextResponse.json({ error: 'This code already exists in Shopify' }, { status: 409 });
     const startsAt = new Date();
-    const expiresAt = typeof body.expiresAt === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(body.expiresAt)
+    const expiresAt = typeof body.expiresAt === 'string' && /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(body.expiresAt)
       ? new Date(body.expiresAt + 'T23:59:59Z') : null;
     const basicDiscount = buildBasicDiscountInput({
       code, discountType: discountType as 'PERCENTAGE' | 'FIXED', discountValue,
