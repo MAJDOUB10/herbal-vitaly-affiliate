@@ -135,6 +135,11 @@ model Payout {
   status          PayoutStatus @default(PENDING)
   notes           String?
   processedAt     DateTime?    @map("processed_at")
+  source          String       @default("REFFERQ") // REFFERQ | SHOPIFY
+  shopifyDiscountId String?     @map("shopify_discount_id")
+  shopifySummary  String?       @map("shopify_summary")
+  shopifyStatus   String?       @map("shopify_status")
+  shopifySyncedAt DateTime?     @map("shopify_synced_at")
   createdBy       String       @map("created_by")
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
@@ -552,7 +557,7 @@ model Coupon {
   description     String?
   discountType    String       @default("PERCENTAGE") @map("discount_type") // PERCENTAGE | FIXED
   discountValue   Float        @map("discount_value") // e.g. 20 = 20% or 20 = $20
-  currency        String       @default("INR")
+  currency        String       @default("EGP")
   maxUses         Int?         @map("max_uses")
   usedCount       Int          @default(0) @map("used_count")
   affiliateId     String?      @map("affiliate_id") // null = program-wide
