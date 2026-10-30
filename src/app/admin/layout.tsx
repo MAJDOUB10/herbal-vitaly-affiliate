@@ -32,6 +32,7 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard,
+  ShoppingBag,
   Users,
   UserCheck,
   Wallet,
@@ -56,6 +57,7 @@ const mainNavItems = [
   { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
   { title: 'Partners', url: '/admin/partners', icon: Users },
   { title: 'Customers', url: '/admin/customers', icon: UserCheck },
+  { title: 'Orders', url: '/admin/orders', icon: ShoppingBag },
   { title: 'Payouts', url: '/admin/payouts', icon: Wallet },
   { title: 'COD Reconciliation', url: '/admin/cod', icon: Truck },
   { title: 'Invoices', url: '/admin/invoices', icon: FileText },

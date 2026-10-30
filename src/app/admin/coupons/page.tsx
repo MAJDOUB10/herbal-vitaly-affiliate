@@ -31,15 +31,21 @@ interface Coupon {
   discountValue: number;
   maxUses?: number;
   usedCount: number;
-  affiliateId?: string;
+  affiliateId?: string | null;
+  source?: string;
   isActive: boolean;
   startsAt?: string;
   expiresAt?: string;
   createdAt: string;
 }
 
+type PartnerChoice = { id: string; name: string; referralCode: string };
+
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [partners, setPartners] = useState<PartnerChoice[]>([]);
+  const [mappingCouponId, setMappingCouponId] = useState<string | null>(null);
+  const [mappingError, setMappingError] = useState('');
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Coupon | null>(null);
@@ -50,7 +56,13 @@ export default function CouponsPage() {
     maxUses: '', affiliateId: '', expiresAt: '',
   });
 
-  useEffect(() => { fetchCoupons(); }, []);
+  useEffect(() => {
+    fetchCoupons();
+    fetch('/api/admin/coupons/partners', { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (data?.success) setPartners(data.partners || []); })
+      .catch(() => setMappingError('Unable to load approved partners'));
+  }, []);
 
   const fetchCoupons = async () => {
     try {
@@ -61,6 +73,27 @@ export default function CouponsPage() {
       console.error('Failed to fetch coupons:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const assignShopifyCoupon = async (coupon: Coupon, affiliateId: string | null) => {
+    setMappingCouponId(coupon.id);
+    setMappingError('');
+    try {
+      const response = await fetch('/api/admin/coupons/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          couponId: coupon.id, affiliateId, expectedAffiliateId: coupon.affiliateId || null,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Unable to assign partner');
+      setCoupons(prev => prev.map(c => c.id === coupon.id ? { ...c, affiliateId } : c));
+    } catch (error) {
+      setMappingError(error instanceof Error ? error.message : 'Unable to save partner mapping');
+    } finally {
+      setMappingCouponId(null);
     }
   };
 
@@ -169,7 +202,7 @@ export default function CouponsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Coupons</h1>
-          <p className="text-muted-foreground">Manage discount codes and double-sided rewards</p>
+          <p className="text-muted-foreground">Shopify promo codes can be linked to approved partners without changing Shopify discounts</p>
         </div>
         <Button onClick={() => { closeDialog(); setDialogOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" />
@@ -201,6 +234,9 @@ export default function CouponsPage() {
         </Card>
       </div>
 
+      {mappingError && (
+        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{mappingError}</p>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>All Coupons</CardTitle>
@@ -243,15 +279,38 @@ export default function CouponsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">{c.usedCount}{c.maxUses ? `/${c.maxUses}` : ''}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{c.affiliateId ? c.affiliateId.slice(0, 8) + '...' : 'Program-wide'}</TableCell>
+                    <TableCell className="text-sm">
+                      {c.source === 'SHOPIFY' ? (
+                        <select
+                          aria-label={`Partner for Shopify coupon ${c.code}`}
+                          disabled={mappingCouponId === c.id || !c.isActive}
+                          className="w-52 max-w-full rounded-md border border-[#E4EBE6] bg-white p-2 text-sm text-[#17251D] focus:outline-primary disabled:opacity-50"
+                          value={c.affiliateId || ''}
+                          onChange={e => assignShopifyCoupon(c, e.target.value || null)}
+                        >
+                          <option value="">Not assigned</option>
+                          {partners.map(p => <option key={p.id} value={p.id}>{p.name} · {p.referralCode}</option>)}
+                        </select>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {partners.find(p => p.id === c.affiliateId)?.name || (c.affiliateId ? 'Assigned (inactive partner)' : 'Program-wide')}
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{c.expiresAt ? formatDate(c.expiresAt) : 'Never'}</TableCell>
                     <TableCell>
-                      <Switch checked={c.isActive} onCheckedChange={() => handleToggle(c.id, c.isActive)} />
+                      {c.source === 'SHOPIFY'
+                        ? <Badge variant={c.isActive ? 'default' : 'secondary'}>{c.isActive ? 'Shopify active' : 'Shopify inactive'}</Badge>
+                        : <Switch checked={c.isActive} onCheckedChange={() => handleToggle(c.id, c.isActive)} />}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        {c.source !== 'SHOPIFY' && (
+                          <>
+                            <Button variant="ghost" size="icon" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -306,8 +365,12 @@ export default function CouponsPage() {
               </div>
             </div>
             <div className="grid gap-2">
-              <Label>Affiliate ID (optional)</Label>
-              <Input value={form.affiliateId} onChange={e => setForm({...form, affiliateId: e.target.value})} placeholder="Leave empty for program-wide coupon" />
+              <Label>Affiliate (optional)</Label>
+              <select className="rounded-md border border-[#E4EBE6] bg-white px-3 py-2 text-sm"
+                value={form.affiliateId} onChange={e => setForm({ ...form, affiliateId: e.target.value })}>
+                <option value="">Program-wide</option>
+                {partners.map(p => <option key={p.id} value={p.id}>{p.name} · {p.referralCode}</option>)}
+              </select>
             </div>
           </div>
           <DialogFooter>
