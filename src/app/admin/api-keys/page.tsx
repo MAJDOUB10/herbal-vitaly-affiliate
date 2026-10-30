@@ -382,7 +382,7 @@ export default function ApiKeysPage() {
             Include your API key in the <code className="rounded bg-muted px-1.5 py-0.5 text-xs">x-api-key</code> header:
           </p>
           <div className="rounded-md bg-muted p-4 font-mono text-sm">
-            <span className="text-blue-600">curl</span> -H <span className="text-green-600">&quot;x-api-key: rfq_your_key_here&quot;</span> \<br />
+            <span className="text-primary">curl</span> -H <span className="text-green-600">&quot;x-api-key: rfq_your_key_here&quot;</span> \<br />
             &nbsp;&nbsp;{typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com'}/api/admin/reports
           </div>
         </CardContent>
