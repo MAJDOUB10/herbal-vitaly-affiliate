@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     if (!one.allowed || !two.allowed)
       return NextResponse.json({ success: false, message: 'Too many requests; try later.' }, { status: 429 });
     // OTP service responds uniformly for unknown or unavailable accounts.
-    await otpService.sendOTP(email);
+    await otpService.sendOTP(email, 'reset-password');
     return NextResponse.json({ success: true, message }, { headers: { 'Cache-Control': 'no-store' } });
   } catch {
     return NextResponse.json({ success: false, message: 'Reset unavailable. Try later.' }, { status: 503 });
