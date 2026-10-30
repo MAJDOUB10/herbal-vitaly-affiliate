@@ -8,7 +8,7 @@ const MAX_ATTEMPTS = 5;
 const RESEND_INTERVAL_MS = 60 * 1000;
 
 export class OTPService {
-  async sendOTP(rawEmail: string): Promise<{ success: boolean; message: string }> {
+  async sendOTP(rawEmail: string, purpose: 'verify-email' | 'reset-password' = 'verify-email'): Promise<{ success: boolean; message: string }> {
     const email = normalizeAffiliateEmail(rawEmail);
     const settingsOk = Boolean(process.env.JWT_SECRET && process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL);
     if (!settingsOk) return { success: false, message: 'Email service not configured' };
@@ -40,8 +40,12 @@ export class OTPService {
       const result = await resend.emails.send({
         from: process.env.RESEND_FROM_EMAIL!,
         to: email,
-        subject: 'Herbal Vitaly — Your verification code',
-        text: `Hello ${name}, your Herbal Vitaly Affiliate verification code is ${code}. It expires in 10 minutes. Never share this code.`,
+        subject: purpose === 'reset-password'
+          ? 'Herbal Vitaly — Password recovery code'
+          : 'Herbal Vitaly — Your verification code',
+        text: purpose === 'reset-password'
+          ? `Hello ${name}, your Herbal Vitaly password recovery code is ${code}. It expires in 10 minutes. If you did not request this, ignore this message. Never share this code.`
+          : `Hello ${name}, your Herbal Vitaly Affiliate verification code is ${code}. It expires in 10 minutes. Never share this code.`,
       });
       if (result.error) throw new Error('Resend rejected OTP');
       return generic;
