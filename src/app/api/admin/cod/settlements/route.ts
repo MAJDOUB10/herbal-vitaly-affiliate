@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { egpToPiasters, previewCodCommission } from '@/lib/hv-cod-connector';
+import { eligibleReferralCodes } from '@/lib/hv-coupon-assignment';
 
 async function admin(req: NextRequest) {
   const userId = req.headers.get('x-user-id');
@@ -12,15 +13,20 @@ export async function GET(req: NextRequest) {
   if (!(await admin(req))) return NextResponse.json({error:'Forbidden'}, {status:403});
   const rows = await prisma.hvCodOrder.findMany({orderBy:{updatedAt:'desc'},take:50});
   const affiliates = await prisma.affiliate.findMany({
-    where:{user:{status:'ACTIVE',emailVerifiedAt:{not:null}}},select:{referralCode:true}
+    where: { user: { role: 'AFFILIATE', status: 'ACTIVE', emailVerifiedAt: { not: null } } },
+    select: { id: true, referralCode: true },
   });
-  const approvedCodes = new Set(affiliates.map(a=>a.referralCode));
+  const shopifyCoupons = await prisma.coupon.findMany({
+    where: { source: 'SHOPIFY', isActive: true, affiliateId: { not: null } },
+    select: { code: true, affiliateId: true, isActive: true },
+  });
+  const approvedCodes = eligibleReferralCodes(affiliates, shopifyCoupons);
   return NextResponse.json({success:true,orders:rows.map(o=>({
     orderName:o.orderName,currency:o.currency,subtotalPiasters:o.subtotalPiasters,
     orderTotalPiasters:o.orderTotalPiasters,referralCode:o.referralCode,
     bostaState:o.bostaState,delivered:o.delivered,courierCollected:o.courierCollected,
     merchantReconciled:o.merchantReconciled,settlementReference:o.merchantSettlementReference,
-    ...previewCodCommission({...o,affiliateApproved:approvedCodes.has(o.referralCode || '')})
+    ...previewCodCommission({...o,affiliateApproved:approvedCodes.has((o.referralCode || '').trim().toUpperCase())})
   }))});
 }
 export async function POST(req: NextRequest) {
