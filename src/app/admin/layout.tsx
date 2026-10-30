@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { BrandIdentity } from '@/components/brand/BrandIdentity';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -87,21 +88,10 @@ function AdminSidebar() {
   };
 
   return (
-    <Sidebar variant="inset">
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <div className="flex items-center gap-3 px-2 py-1.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-                <span className="text-lg">🎯</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-bold">Refferq</span>
-                <span className="text-xs text-muted-foreground">Admin Dashboard</span>
-              </div>
-            </div>
-          </SidebarMenuItem>
-        </SidebarMenu>
+    <Sidebar variant="inset" className="bg-white">
+      <SidebarHeader className="border-b border-sidebar-border bg-white px-3 py-3">
+        <BrandIdentity compact align="start" className="hv-sidebar-brand" />
+        <p className="px-2 pt-1 text-[11px] font-semibold uppercase tracking-[0.13em] text-primary">Admin Dashboard</p>
       </SidebarHeader>
 
       <SidebarContent>
@@ -256,8 +246,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <SidebarProvider>
       <AdminSidebar />
-      <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+      <SidebarInset className="hv-workspace">
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-[#E4EBE6] bg-white px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <div className="flex flex-1 items-center justify-between">
@@ -276,7 +266,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
         </header>
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4 md:p-6">
           {children}
         </main>
       </SidebarInset>

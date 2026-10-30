@@ -639,7 +639,7 @@ Refferq.clearReferralCode();`}
               <div className="rounded-md border p-4 space-y-3">
                 <h4 className="text-sm font-medium">Direct referral route</h4>
                 <p className="text-sm text-muted-foreground">
-                  You can also use the built-in redirect route to send visitors through Refferq first:
+                  You can also use the built-in redirect route to send visitors through the Herbal Vitaly Affiliate Hub first:
                 </p>
                 <div className="rounded-md bg-muted p-3 font-mono text-sm break-all">
                   {appUrl}/<span className="text-blue-600">r/</span><span className="text-green-600">PARTNER-CODE</span>

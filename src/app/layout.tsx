@@ -1,11 +1,12 @@
 import React from 'react';
 import { Toaster } from '@/components/ui/sonner';
-import { db } from '@/lib/prisma';
 import './globals.css';
 
 export const metadata = {
-  title: 'Refferq - Modern Affiliate Marketing Platform',
-  description: 'Next-generation affiliate marketing platform with comprehensive tracking, commission management, and payout automation.',
+  title: 'Herbal Vitaly Affiliate Hub',
+  description: 'Herbal Vitaly Partner & Affiliate Hub — Let nature be your medicine.',
+  icons: { icon: 'https://cdn.shopify.com/s/files/1/1003/9420/5506/files/herbal-vitaly-affiliate-official-logo.png?v=1793365508' },
+  openGraph: { title: 'Herbal Vitaly Affiliate Hub', description: 'Let nature be your medicine', images: [{ url: 'https://cdn.shopify.com/s/files/1/1003/9420/5506/files/herbal-vitaly-affiliate-official-logo.png?v=1793365508', alt: 'Herbal Vitaly official logo' }] },
 };
 
 export default async function RootLayout({
@@ -13,16 +14,9 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  let settings = null;
-  try {
-    settings = await db.getPlatformSettings();
-  } catch {
-    // DB unavailable (e.g. during Docker build prerendering) — use defaults
-  }
-
-  // Create dynamic styles based on settings
+  // The corporate brand color is fixed across authentication and dashboards
   const dynamicStyles = {
-    '--primary': settings?.brandButtonColor ? hexToHSL(settings.brandButtonColor) : undefined,
+    '--primary': hexToHSL('#1F6B3A'),
     '--radius': '0.5rem',
   } as React.CSSProperties;
 

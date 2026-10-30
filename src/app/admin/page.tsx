@@ -145,16 +145,16 @@ export default function AdminDashboardPage() {
       description: 'Total projected value',
       trend: '+12%',
       trendUp: true,
-      color: 'text-blue-600',
-      bg: 'bg-blue-500/10',
+      color: 'text-primary',
+      bg: 'bg-primary/10',
     },
     {
       title: 'Confirmed Revenue',
       value: `E£${stats ? (stats.totalRevenue / 100).toFixed(2) : '0.00'}`,
       icon: TrendingUp,
       description: 'Approved transactions',
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-500/10',
+      color: 'text-primary',
+      bg: 'bg-primary/10',
     },
     {
       title: 'Commission Owed',
@@ -186,16 +186,16 @@ export default function AdminDashboardPage() {
       description: 'Manage affiliates',
       icon: Users,
       href: '/admin/partners',
-      color: 'text-blue-600',
-      bg: 'bg-blue-500/10',
+      color: 'text-primary',
+      bg: 'bg-primary/10',
     },
     {
       title: 'Customers',
       description: 'View referrals',
       icon: UserCheck,
       href: '/admin/customers',
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-500/10',
+      color: 'text-primary',
+      bg: 'bg-primary/10',
     },
     {
       title: 'Payouts',
@@ -243,7 +243,7 @@ export default function AdminDashboardPage() {
                 <div className="mt-1 flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">{stat.description}</span>
                   {stat.trend && (
-                    <Badge variant="secondary" className="h-5 gap-0.5 px-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border-0">
+                    <Badge variant="secondary" className="h-5 gap-0.5 px-1.5 text-[10px] font-semibold text-[#18572F] bg-[#EAF4ED] border-0">
                       <ArrowUpRight className="h-3 w-3" />
                       {stat.trend}
                     </Badge>
@@ -283,8 +283,8 @@ export default function AdminDashboardPage() {
           <Card>
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10">
-                  <Activity className="h-5 w-5 text-blue-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                  <Activity className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1">
                   <p className="text-2xl font-bold">{stats?.totalLeads || 0}</p>
@@ -297,8 +297,8 @@ export default function AdminDashboardPage() {
           <Card>
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
-                  <Target className="h-5 w-5 text-emerald-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                  <Target className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1">
                   <p className="text-2xl font-bold">{stats?.totalReferredCustomers || 0}</p>
@@ -306,12 +306,12 @@ export default function AdminDashboardPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-medium text-muted-foreground">Rate</p>
-                  <p className="text-sm font-bold text-emerald-600">{conversionRate}%</p>
+                  <p className="text-sm font-bold text-primary">{conversionRate}%</p>
                 </div>
               </div>
               <Progress
                 value={parseFloat(conversionRate)}
-                className="mt-3 h-1.5 [&>div]:bg-emerald-500"
+                className="mt-3 h-1.5 [&>div]:bg-primary"
               />
             </CardContent>
           </Card>

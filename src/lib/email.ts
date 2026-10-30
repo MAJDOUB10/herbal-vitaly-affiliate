@@ -83,7 +83,8 @@ export interface CommissionNotificationData {
 }
 
 class EmailService {
-  private defaultFrom = process.env.RESEND_FROM_EMAIL || 'Refferq <noreply@refferq.com>';
+  // Templates use the approved Herbal Vitaly corporate identity; sending still requires verified RESEND_FROM_EMAIL.
+  private defaultFrom = process.env.RESEND_FROM_EMAIL || 'Herbal Vitaly <contact@herbalvitaly.com>';
 
   /** Escape HTML special characters to prevent XSS in email templates */
   private escapeHtml(str: string): string {
@@ -132,11 +133,15 @@ class EmailService {
       const { Resend } = await import('resend');
       const resend = new Resend(process.env.RESEND_API_KEY);
 
+      const brandHeader = '<div style="padding:16px 24px;text-align:center;background:#ffffff;border-bottom:1px solid #E4EBE6"><img src="https://cdn.shopify.com/s/files/1/1003/9420/5506/files/herbal-vitaly-affiliate-official-logo.png?v=1793365508" alt="Herbal Vitaly — Let nature be your medicine" width="152" style="width:152px;max-width:100%;height:auto" /></div>';
+      const brandedHtml = /<body[^>]*>/i.test(params.html)
+        ? params.html.replace(/(<body[^>]*>)/i, '$1' + brandHeader)
+        : brandHeader + params.html;
       const result = await resend.emails.send({
         from: this.defaultFrom,
         to: params.to,
         subject: params.subject,
-        html: params.html,
+        html: brandedHtml,
       });
 
       return { success: true, message: 'Email sent successfully' };
@@ -178,18 +183,18 @@ class EmailService {
     <html>
     <head>
       <meta charset="utf-8">
-      <title>Welcome to Refferq</title>
+      <title>Welcome to Herbal Vitaly</title>
       <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .header { background: linear-gradient(135deg, #1F6B3A 0%, #18572F 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
         .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
-        .button { display: inline-block; background: #10b981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .button { display: inline-block; background: #1F6B3A; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
         .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
       </style>
     </head>
     <body>
       <div class="header">
-        <h1>Welcome to Refferq! 🎉</h1>
+        <h1>Welcome to Herbal Vitaly! 🎉</h1>
       </div>
       <div class="content">
         <h2>Hello ${this.escapeHtml(data.name)}!</h2>
@@ -229,11 +234,11 @@ class EmailService {
         
         <p>If you have any questions, please don't hesitate to contact our support team.</p>
         
-        <p>Best regards,<br>The Refferq Team</p>
+        <p>Best regards,<br>The Herbal Vitaly Team</p>
       </div>
       <div class="footer">
         <p>This email was sent to ${this.escapeHtml(data.email)}</p>
-        <p>© ${new Date().getFullYear()} Refferq. All rights reserved.</p>
+        <p>© ${new Date().getFullYear()} Herbal Vitaly. All rights reserved.</p>
       </div>
     </body>
     </html>
@@ -278,7 +283,7 @@ class EmailService {
         
         <p>Please review this referral in the admin dashboard and approve or reject it accordingly.</p>
         
-        <p>Best regards,<br>The Refferq System</p>
+        <p>Best regards,<br>The Herbal Vitaly System</p>
       </div>
     </body>
     </html>
@@ -331,7 +336,7 @@ class EmailService {
           <a href="${process.env.NEXT_PUBLIC_APP_URL}/affiliate" class="button">View Dashboard</a>
         </div>
         
-        <p>Best regards,<br>The Refferq Team</p>
+        <p>Best regards,<br>The Herbal Vitaly Team</p>
       </div>
     </body>
     </html>
@@ -380,7 +385,7 @@ class EmailService {
         
         <p>Thank you for being a valued affiliate partner!</p>
         
-        <p>Best regards,<br>The Refferq Team</p>
+        <p>Best regards,<br>The Herbal Vitaly Team</p>
       </div>
     </body>
     </html>
@@ -397,10 +402,10 @@ class EmailService {
       <title>Referral Converted!</title>
       <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .header { background: linear-gradient(135deg, #1F6B3A 0%, #18572F 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
         .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
-        .details { background: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #10b981; }
-        .button { display: inline-block; background: #10b981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .details { background: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #1F6B3A; }
+        .button { display: inline-block; background: #1F6B3A; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
       </style>
     </head>
     <body>
@@ -428,7 +433,7 @@ class EmailService {
         
         <p>Keep up the fantastic work!</p>
         
-        <p>Best regards,<br>The Refferq Team</p>
+        <p>Best regards,<br>The Herbal Vitaly Team</p>
       </div>
     </body>
     </html>
@@ -449,11 +454,11 @@ class EmailService {
         <title>New Commission Earned!</title>
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .header { background: linear-gradient(135deg, #1F6B3A 0%, #18572F 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
           .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
-          .amount-box { background: white; border: 2px solid #10b981; border-radius: 10px; padding: 20px; text-align: center; margin: 20px 0; }
-          .commission { font-size: 36px; font-weight: bold; color: #10b981; }
-          .button { display: inline-block; background: #10b981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+          .amount-box { background: white; border: 2px solid #1F6B3A; border-radius: 10px; padding: 20px; text-align: center; margin: 20px 0; }
+          .commission { font-size: 36px; font-weight: bold; color: #1F6B3A; }
+          .button { display: inline-block; background: #1F6B3A; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
           .details { background: white; padding: 15px; border-radius: 5px; margin: 15px 0; }
           .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
         </style>
@@ -484,7 +489,7 @@ class EmailService {
             </div>
             <div class="detail-row">
               <span>Your Commission:</span>
-              <strong style="color: #10b981;">${commission}</strong>
+              <strong style="color: #1F6B3A;">${commission}</strong>
             </div>
             <div class="detail-row">
               <span>Commission Rate:</span>
@@ -506,7 +511,7 @@ class EmailService {
             Keep up the great work! Continue referring customers to earn more commissions.
           </p>
           
-          <p>Best regards,<br>The Refferq Team</p>
+          <p>Best regards,<br>The Herbal Vitaly Team</p>
         </div>
       </body>
       </html>
@@ -517,7 +522,7 @@ class EmailService {
     return this.sendTemplatedEmail({
       to: data.email,
       templateType: 'WELCOME_EMAIL',
-      fallbackSubject: `Welcome to Refferq - ${data.role === 'affiliate' ? 'Affiliate' : 'Admin'} Account Created`,
+      fallbackSubject: `Welcome to Herbal Vitaly - ${data.role === 'affiliate' ? 'Affiliate' : 'Admin'} Account Created`,
       variables: data,
       generateFallbackHtml: () => this.generateWelcomeEmailHTML(data),
     });
@@ -598,7 +603,7 @@ class EmailService {
     return this.sendTemplatedEmail({
       to: email,
       templateType: 'PASSWORD_RESET',
-      fallbackSubject: 'Password Reset Request - Refferq',
+      fallbackSubject: 'Password Reset Request - Herbal Vitaly',
       variables: { resetUrl },
       generateFallbackHtml: () => `
       <!DOCTYPE html>
@@ -638,7 +643,7 @@ class EmailService {
           <p>If the button doesn't work, copy and paste this link into your browser:</p>
           <p style="word-break: break-all; background: #f8f9fa; padding: 10px; border-radius: 5px;">${resetUrl}</p>
           
-          <p>Best regards,<br>The Refferq Team</p>
+          <p>Best regards,<br>The Herbal Vitaly Team</p>
         </div>
       </body>
       </html>
@@ -651,7 +656,7 @@ class EmailService {
     return this.sendTemplatedEmail({
       to: email,
       templateType: 'EMAIL_VERIFICATION',
-      fallbackSubject: 'Verify Your Email Address - Refferq',
+      fallbackSubject: 'Verify Your Email Address - Herbal Vitaly',
       variables: { verificationUrl },
       generateFallbackHtml: () => `
       <!DOCTYPE html>
@@ -683,7 +688,7 @@ class EmailService {
           
           <p>This verification link will expire in 24 hours.</p>
           
-          <p>Best regards,<br>The Refferq Team</p>
+          <p>Best regards,<br>The Herbal Vitaly Team</p>
         </div>
       </body>
       </html>
@@ -785,7 +790,7 @@ class EmailService {
             Thank you for being a valued partner! Continue referring customers to earn more.
           </p>
           
-          <p>Best regards,<br>The Refferq Team</p>
+          <p>Best regards,<br>The Herbal Vitaly Team</p>
         </div>
       </body>
       </html>
@@ -824,11 +829,11 @@ class EmailService {
         <title>Payment Completed!</title>
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .header { background: linear-gradient(135deg, #1F6B3A 0%, #18572F 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
           .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
-          .amount-box { background: white; border: 2px solid #10b981; border-radius: 10px; padding: 20px; text-align: center; margin: 20px 0; }
-          .amount { font-size: 36px; font-weight: bold; color: #10b981; }
-          .button { display: inline-block; background: #10b981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+          .amount-box { background: white; border: 2px solid #1F6B3A; border-radius: 10px; padding: 20px; text-align: center; margin: 20px 0; }
+          .amount { font-size: 36px; font-weight: bold; color: #1F6B3A; }
+          .button { display: inline-block; background: #1F6B3A; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
           .details { background: white; padding: 15px; border-radius: 5px; margin: 15px 0; }
           .status-badge { display: inline-block; background: #d1fae5; color: #065f46; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; }
           .celebration { font-size: 48px; text-align: center; margin: 20px 0; }
@@ -859,7 +864,7 @@ class EmailService {
             <p><strong>Payout ID:</strong> <code style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${this.escapeHtml(data.payoutId)}</code></p>
           </div>
           
-          <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <div style="background: #d1fae5; border-left: 4px solid #1F6B3A; padding: 15px; border-radius: 5px; margin: 20px 0;">
             <strong>✓ Payment Confirmed</strong><br>
             The funds should appear in your account within 1-2 business days, depending on your bank or payment provider.
           </div>
@@ -872,7 +877,7 @@ class EmailService {
             Keep up the excellent work! Continue referring customers to earn more commissions.
           </p>
           
-          <p>Best regards,<br>The Refferq Team</p>
+          <p>Best regards,<br>The Herbal Vitaly Team</p>
         </div>
       </body>
       </html>
@@ -903,13 +908,13 @@ class EmailService {
   async sendGenericEmail(to: string, data: { subject: string; body: string }) {
     const html = `
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
-          <h1 style="color: #ffffff; font-size: 22px; margin: 0;">Refferq Notification</h1>
+        <div style="background: linear-gradient(135deg, #1F6B3A 0%, #18572F 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+          <h1 style="color: #ffffff; font-size: 22px; margin: 0;">Herbal Vitaly Notification</h1>
         </div>
         <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 16px 16px;">
           <p style="color: #374151; font-size: 15px; line-height: 1.6;">${this.escapeHtml(data.body)}</p>
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
-          <p style="color: #9ca3af; font-size: 12px; text-align: center;">This is an automated notification from Refferq.</p>
+          <p style="color: #9ca3af; font-size: 12px; text-align: center;">This is an automated notification from Herbal Vitaly.</p>
         </div>
       </div>
     `;
