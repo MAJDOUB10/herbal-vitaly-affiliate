@@ -23,6 +23,8 @@ import {
   Ticket, Plus, Pencil, Trash2, Copy, Check,
 } from 'lucide-react';
 
+interface Partner { id: string; name: string; referralCode: string; }
+
 interface Coupon {
   id: string;
   code: string;
@@ -44,6 +46,10 @@ interface Coupon {
 
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [selectedPartners, setSelectedPartners] = useState<Record<string, string>>({});
+  const [assigningCode, setAssigningCode] = useState<string | null>(null);
+  const [assignMessage, setAssignMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Coupon | null>(null);
@@ -54,18 +60,52 @@ export default function CouponsPage() {
     maxUses: '', affiliateId: '', expiresAt: '',
   });
 
-  useEffect(() => { fetchCoupons(); }, []);
+  useEffect(() => {
+    fetchCoupons();
+    fetch('/api/admin/coupons/partners', { cache: 'no-store' })
+      .then(async res => { if (!res.ok) throw new Error('Partners unavailable'); return res.json(); })
+      .then(data => setPartners(data.partners || []))
+      .catch(() => setAssignMessage('Impossible de charger les partenaires. Réessayez après connexion admin.'));
+  }, []);
 
   const fetchCoupons = async () => {
     try {
       const res = await fetch('/api/admin/coupons');
       const data = await res.json();
-      if (data.success) setCoupons(data.coupons || []);
+      if (data.success) {
+        const incoming: Coupon[] = data.coupons || [];
+        setCoupons(incoming);
+        setSelectedPartners(Object.fromEntries(incoming.map(c => [c.id, c.affiliateId || '__none'])));
+      }
     } catch (error) {
       console.error('Failed to fetch coupons:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const saveAssignment = async (coupon: Coupon) => {
+    if (coupon.source !== 'SHOPIFY') return;
+    const selected = selectedPartners[coupon.id] || '__none';
+    const affiliateId = selected === '__none' ? null : selected;
+    const previous = coupon.affiliateId || null;
+    if (affiliateId === previous) return;
+    if (!confirm(`Confirmer l'association du code ${coupon.code} ? La réduction Shopify ne sera pas modifiée et aucune commission ne sera créée.`)) return;
+    setAssigningCode(coupon.id);
+    setAssignMessage('');
+    try {
+      const res = await fetch('/api/admin/coupons/assign', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ couponId: coupon.id, affiliateId, expectedAffiliateId: previous }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Association impossible');
+      setCoupons(old => old.map(c => c.id === coupon.id ? { ...c, affiliateId: data.affiliateId } : c));
+      setAssignMessage(`Association de ${coupon.code} enregistrée dans Refferq (aucune commission créée).`);
+    } catch (error) {
+      setAssignMessage(error instanceof Error ? error.message : 'Erreur de synchronisation');
+      await fetchCoupons();
+    } finally { setAssigningCode(null); }
   };
 
   const handleSave = async () => {
@@ -173,7 +213,7 @@ export default function CouponsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Coupons</h1>
-          <p className="text-muted-foreground">Codes Shopify synchronisés en lecture seule. Un code promotionnel ne devient pas automatiquement un code affilié.</p>
+          <p className="text-muted-foreground">Remises Shopify en lecture seule. Vous pouvez associer un partenaire Refferq approuvé sans modifier le code Shopify ni créer de commission.</p>
         </div>
         <Button onClick={() => { closeDialog(); setDialogOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" />
@@ -212,6 +252,7 @@ export default function CouponsPage() {
         </Card>
       </div>
 
+      {assignMessage && <p role="status" className="rounded-md border bg-slate-50 px-3 py-2 text-sm">{assignMessage}</p>}
       <Card>
         <CardHeader>
           <CardTitle>All Coupons</CardTitle>
@@ -258,7 +299,36 @@ export default function CouponsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">{c.usedCount}{c.maxUses ? `/${c.maxUses}` : ''}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{c.affiliateId ? c.affiliateId.slice(0, 8) + '...' : c.source === 'SHOPIFY' ? 'Unassigned — no commission' : 'Program-wide'}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {c.source === 'SHOPIFY' ? (
+                        <div className="flex min-w-56 items-center gap-2">
+                          <Select
+                            value={selectedPartners[c.id] || '__none'}
+                            onValueChange={value => setSelectedPartners(prev => ({ ...prev, [c.id]: value }))}
+                            disabled={assigningCode === c.id}
+                          >
+                            <SelectTrigger className="w-52" aria-label={`Partenaire pour ${c.code}`}>
+                              <SelectValue placeholder="Choisir un partenaire" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none">Non attribué</SelectItem>
+                              {partners.map(p => (
+                                <SelectItem key={p.id} value={p.id}>{p.name} ({p.referralCode})</SelectItem>
+                              ))}
+                              {c.affiliateId && !partners.some(p => p.id === c.affiliateId) && (
+                                <SelectItem disabled value={c.affiliateId}>Partenaire non approuvé (retirer l'attribution)</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <Button size="sm" variant="outline"
+                            disabled={assigningCode === c.id || (selectedPartners[c.id] || '__none') === (c.affiliateId || '__none') ||
+                              (!c.isActive && (selectedPartners[c.id] || '__none') !== '__none')}
+                            onClick={() => saveAssignment(c)}>
+                            {assigningCode === c.id ? 'En cours' : 'Enregistrer'}
+                          </Button>
+                        </div>
+                      ) : (c.affiliateId || 'Programme général')}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{c.expiresAt ? formatDate(c.expiresAt) : 'Never'}</TableCell>
                     <TableCell>
                       {c.source === 'SHOPIFY' ? <Badge variant="outline">{c.shopifyStatus || (c.isActive ? 'ACTIVE' : 'INACTIVE')}</Badge> :
