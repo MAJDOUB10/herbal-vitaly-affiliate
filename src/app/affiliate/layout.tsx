@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { BrandIdentity, HERBAL_VITALY } from '@/components/brand/BrandIdentity';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -41,13 +42,6 @@ import {
   Bell,
 } from 'lucide-react';
 
-interface BrandSettings {
-  companyName?: string;
-  companyLogo?: string;
-  brandBackgroundColor?: string;
-  brandButtonColor?: string;
-  brandTextColor?: string;
-}
 
 const mainNavItems = [
   { title: 'Dashboard', url: '/affiliate', icon: LayoutDashboard },
@@ -61,7 +55,7 @@ const accountNavItems = [
   { title: 'Settings', url: '/affiliate/settings', icon: Settings },
 ];
 
-function AffiliateSidebar({ brand }: { brand: BrandSettings }) {
+function AffiliateSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -71,29 +65,13 @@ function AffiliateSidebar({ brand }: { brand: BrandSettings }) {
     return pathname.startsWith(url);
   };
 
-  const accentColor = brand.brandButtonColor || '#059669';
-  const brandName = brand.companyName || 'Refferq';
+  const accentColor = HERBAL_VITALY.primary;
 
   return (
-    <Sidebar variant="inset">
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <div className="flex items-center gap-3 px-2 py-1.5">
-              {brand.companyLogo ? (
-                <img src={brand.companyLogo} alt={brandName} className="h-10 w-10 rounded-xl object-contain" />
-              ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-sm" style={{ backgroundColor: accentColor }}>
-                  <span className="text-lg font-bold">{brandName.charAt(0)}</span>
-                </div>
-              )}
-              <div className="flex flex-col">
-                <span className="text-sm font-bold">{brandName}</span>
-                <span className="text-xs text-muted-foreground">Affiliate Portal</span>
-              </div>
-            </div>
-          </SidebarMenuItem>
-        </SidebarMenu>
+    <Sidebar variant="inset" className="bg-white">
+      <SidebarHeader className="border-b border-sidebar-border bg-white px-3 py-3">
+        <BrandIdentity compact align="start" className="hv-sidebar-brand" />
+        <p className="px-2 pt-1 text-[11px] font-semibold uppercase tracking-[0.13em] text-primary">Affiliate Portal</p>
       </SidebarHeader>
 
       <SidebarContent>
@@ -192,24 +170,13 @@ function AffiliateSidebar({ brand }: { brand: BrandSettings }) {
 
 export default function AffiliateLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  const [brand, setBrand] = useState<BrandSettings>({});
-
-  useEffect(() => {
-    fetch('/api/affiliate/branding')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.settings) setBrand(data.settings);
-      })
-      .catch(() => {});
-  }, []);
-
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <div className="relative mx-auto h-12 w-12">
             <div className="absolute inset-0 rounded-full border-4 border-muted" />
-            <div className="absolute inset-0 animate-spin rounded-full border-4 border-transparent" style={{ borderTopColor: brand.brandButtonColor || '#059669' }} />
+            <div className="absolute inset-0 animate-spin rounded-full border-4 border-transparent" style={{ borderTopColor: HERBAL_VITALY.primary }} />
           </div>
           <p className="mt-4 text-sm text-muted-foreground">Loading your dashboard...</p>
         </div>
@@ -236,9 +203,9 @@ export default function AffiliateLayout({ children }: { children: React.ReactNod
 
   return (
     <SidebarProvider>
-      <AffiliateSidebar brand={brand} />
-      <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+      <AffiliateSidebar />
+      <SidebarInset className="hv-workspace">
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-[#E4EBE6] bg-white px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <div className="flex flex-1 items-center justify-between">
@@ -254,7 +221,7 @@ export default function AffiliateLayout({ children }: { children: React.ReactNod
             </div>
           </div>
         </header>
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4 md:p-6">
           {children}
         </main>
       </SidebarInset>
