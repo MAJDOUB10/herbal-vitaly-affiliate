@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     });
   } catch {
     return NextResponse.json({
-      error: 'Shopify products unavailable. Configure SHOPIFY_ADMIN_ACCESS_TOKEN and SHOPIFY_SHOP_DOMAIN in Vercel Preview.',
+      error: 'Shopify products unavailable. Configure Shopify Dev Dashboard client credentials (SHOPIFY_CLIENT_ID + SHOPIFY_CLIENT_SECRET) or a legacy Admin API token in Vercel Preview.',
     }, { status: 503 });
   }
 }
