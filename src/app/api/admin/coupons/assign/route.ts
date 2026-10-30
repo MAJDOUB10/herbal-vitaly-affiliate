@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       await tx.auditLog.create({
         data: { actorId: actor.id, action: 'ASSIGN_SHOPIFY_COUPON', objectType: 'COUPON',
           objectId: coupon.id, payload: { code: coupon.code,
-            from: coupon.affiliateId, to: affiliateId,
+            from: coupon.affiliateId, to: affiliateId as string | null,
             historicalOrdersChanged: false, payoutCreated: false } },
       });
       return { status: 200, unchanged: false };
