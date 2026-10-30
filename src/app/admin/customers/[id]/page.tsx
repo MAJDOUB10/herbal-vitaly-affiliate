@@ -466,7 +466,7 @@ export default function CustomerDetailPage() {
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 rounded-full bg-blue-100 p-1">
-                    <FileText className="h-3 w-3 text-blue-600" />
+                    <FileText className="h-3 w-3 text-primary" />
                   </div>
                   <div>
                     <p className="text-sm font-medium">Lead Submitted</p>
