@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Tag, Link2, Copy, ExternalLink } from 'lucide-react';
+import { Tag, Copy, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-type ProductLink = { handle: string; productUrl: string; affiliateLink: string };
+type ProductLink = { handle: string; title: string; productUrl: string; affiliateLink: string };
 type PartnerCoupon = {
   id: string; code: string; discountType: string; discountValue: number;
   products: ProductLink[];
@@ -57,10 +57,11 @@ export default function AffiliateCouponsPage() {
         <CardDescription>Only the listed products qualify for this Shopify discount.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        <p className="text-xs font-medium text-muted-foreground">Shopify verified eligible product pages</p>
         {c.products.map(p => <div key={p.handle} className="space-y-2 rounded-xl border border-[#E4EBE6] p-3">
           <a href={p.productUrl} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-            {decodeURIComponent(p.handle)} <ExternalLink className="h-3 w-3"/>
+            {p.title} <ExternalLink className="h-3 w-3"/>
           </a>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <input readOnly aria-label={'Affiliate link for ' + p.handle}
