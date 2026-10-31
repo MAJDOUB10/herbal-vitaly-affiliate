@@ -31,15 +31,28 @@ interface Coupon {
   discountValue: number;
   maxUses?: number;
   usedCount: number;
-  affiliateId?: string;
+  affiliateId?: string | null;
+  source?: string;
+  shopifyProductIds?: string[];
+  shopifyProductHandles?: string[];
+  shopifyStatus?: string;
   isActive: boolean;
   startsAt?: string;
   expiresAt?: string;
   createdAt: string;
 }
 
+type PartnerChoice = { id: string; name: string; referralCode: string };
+type ProductChoice = { id: string; title: string; handle: string; onlineStoreUrl: string };
+
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [partners, setPartners] = useState<PartnerChoice[]>([]);
+  const [products, setProducts] = useState<ProductChoice[]>([]);
+  const [catalogError, setCatalogError] = useState('');
+  const [formError, setFormError] = useState('');
+  const [mappingCouponId, setMappingCouponId] = useState<string | null>(null);
+  const [mappingError, setMappingError] = useState('');
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Coupon | null>(null);
@@ -47,10 +60,20 @@ export default function CouponsPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [form, setForm] = useState({
     code: '', description: '', discountType: 'PERCENTAGE', discountValue: '',
-    maxUses: '', affiliateId: '', expiresAt: '',
+    maxUses: '', affiliateId: '', expiresAt: '', productIds: [] as string[],
   });
 
-  useEffect(() => { fetchCoupons(); }, []);
+  useEffect(() => {
+    fetchCoupons();
+    fetch('/api/admin/coupons/partners', { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (data?.success) setPartners(data.partners || []); })
+      .catch(() => setMappingError('Unable to load approved partners'));
+    fetch('/api/admin/coupons/products', { cache: 'no-store' })
+      .then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.error); return data; })
+      .then(data => { if (data.success) setProducts(data.products || []); })
+      .catch(error => setCatalogError(error instanceof Error ? error.message : 'Shopify catalog unavailable'));
+  }, []);
 
   const fetchCoupons = async () => {
     try {
@@ -64,7 +87,32 @@ export default function CouponsPage() {
     }
   };
 
+  const assignShopifyCoupon = async (coupon: Coupon, affiliateId: string | null) => {
+    setMappingCouponId(coupon.id);
+    setMappingError('');
+    try {
+      const response = await fetch('/api/admin/coupons/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          couponId: coupon.id, affiliateId, expectedAffiliateId: coupon.affiliateId || null,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Unable to assign partner');
+      setCoupons(prev => prev.map(c => c.id === coupon.id ? { ...c, affiliateId } : c));
+    } catch (error) {
+      setMappingError(error instanceof Error ? error.message : 'Unable to save partner mapping');
+    } finally {
+      setMappingCouponId(null);
+    }
+  };
+
   const handleSave = async () => {
+    setFormError('');
+    if (!editing && (!form.affiliateId || !form.productIds.length)) {
+      setFormError('Select an approved partner and at least one Shopify product.'); return;
+    }
     setSaving(true);
     try {
       const payload: any = {
@@ -75,6 +123,7 @@ export default function CouponsPage() {
         maxUses: form.maxUses ? parseInt(form.maxUses) : null,
         affiliateId: form.affiliateId || null,
         expiresAt: form.expiresAt || null,
+        productIds: form.productIds,
         ...(editing ? { id: editing.id } : {}),
       };
       const res = await fetch('/api/admin/coupons', {
@@ -82,12 +131,12 @@ export default function CouponsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (res.ok) {
-        await fetchCoupons();
-        closeDialog();
-      }
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Unable to create Shopify discount');
+      await fetchCoupons();
+      closeDialog();
     } catch (error) {
-      console.error('Failed to save coupon:', error);
+      setFormError(error instanceof Error ? error.message : 'Unable to create Shopify discount');
     } finally {
       setSaving(false);
     }
@@ -130,6 +179,7 @@ export default function CouponsPage() {
       maxUses: c.maxUses ? String(c.maxUses) : '',
       affiliateId: c.affiliateId || '',
       expiresAt: c.expiresAt ? c.expiresAt.slice(0, 10) : '',
+      productIds: c.shopifyProductIds || [],
     });
     setDialogOpen(true);
   };
@@ -137,7 +187,8 @@ export default function CouponsPage() {
   const closeDialog = () => {
     setDialogOpen(false);
     setEditing(null);
-    setForm({ code: '', description: '', discountType: 'PERCENTAGE', discountValue: '', maxUses: '', affiliateId: '', expiresAt: '' });
+    setFormError('');
+    setForm({ code: '', description: '', discountType: 'PERCENTAGE', discountValue: '', maxUses: '', affiliateId: '', expiresAt: '', productIds: [] });
   };
 
   const copyCode = (code: string) => {
@@ -146,7 +197,7 @@ export default function CouponsPage() {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const formatDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const formatDate = (d: string) => new Date(d).toLocaleDateString('en-EG', { day: 'numeric', month: 'short', year: 'numeric' });
 
   if (loading) {
     return (
@@ -169,11 +220,11 @@ export default function CouponsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Coupons</h1>
-          <p className="text-muted-foreground">Manage discount codes and double-sided rewards</p>
+          <p className="text-muted-foreground">Shopify promo codes can be linked to approved partners without changing Shopify discounts</p>
         </div>
         <Button onClick={() => { closeDialog(); setDialogOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" />
-          Create Coupon
+          Create Shopify Coupon
         </Button>
       </div>
 
@@ -201,6 +252,9 @@ export default function CouponsPage() {
         </Card>
       </div>
 
+      {mappingError && (
+        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{mappingError}</p>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>All Coupons</CardTitle>
@@ -221,6 +275,7 @@ export default function CouponsPage() {
                   <TableHead>Discount</TableHead>
                   <TableHead>Usage</TableHead>
                   <TableHead>Affiliate</TableHead>
+                  <TableHead>Products</TableHead>
                   <TableHead>Expires</TableHead>
                   <TableHead>Active</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -239,19 +294,54 @@ export default function CouponsPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
-                        {c.discountType === 'PERCENTAGE' ? `${c.discountValue}%` : `₹${c.discountValue}`}
+                        {c.discountType === 'PERCENTAGE' ? `${c.discountValue}%` : `${c.discountValue} EGP`}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">{c.usedCount}{c.maxUses ? `/${c.maxUses}` : ''}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{c.affiliateId ? c.affiliateId.slice(0, 8) + '...' : 'Program-wide'}</TableCell>
+                    <TableCell className="text-sm">
+                      {c.source === 'SHOPIFY' ? (
+                        <select
+                          aria-label={`Partner for Shopify coupon ${c.code}`}
+                          disabled={mappingCouponId === c.id || !c.isActive}
+                          className="w-52 max-w-full rounded-md border border-[#E4EBE6] bg-white p-2 text-sm text-[#17251D] focus:outline-primary disabled:opacity-50"
+                          value={c.affiliateId || ''}
+                          onChange={e => assignShopifyCoupon(c, e.target.value || null)}
+                        >
+                          <option value="">Not assigned</option>
+                          {partners.map(p => <option key={p.id} value={p.id}>{p.name} · {p.referralCode}</option>)}
+                        </select>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {partners.find(p => p.id === c.affiliateId)?.name || (c.affiliateId ? 'Assigned (inactive partner)' : 'Program-wide')}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {c.shopifyProductHandles?.length
+                        ? c.shopifyProductHandles.map(handle => (
+                          <div key={handle} className="mb-1">
+                            <a className="text-primary underline" target="_blank" rel="noopener noreferrer"
+                              href={'https://herbalvitaly.com/products/' + encodeURIComponent(handle)}>
+                              {products.find(p => p.handle === handle)?.title || handle}
+                            </a>
+                          </div>
+                        ))
+                        : <span className="text-muted-foreground">All / legacy</span>}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{c.expiresAt ? formatDate(c.expiresAt) : 'Never'}</TableCell>
                     <TableCell>
-                      <Switch checked={c.isActive} onCheckedChange={() => handleToggle(c.id, c.isActive)} />
+                      {c.source === 'SHOPIFY'
+                        ? <Badge variant={c.isActive && c.shopifyStatus === 'ACTIVE' ? 'default' : 'secondary'}>{c.shopifyStatus === 'ACTIVE' ? 'Shopify active' : c.shopifyStatus || 'Shopify pending'}</Badge>
+                        : <Switch checked={c.isActive} onCheckedChange={() => handleToggle(c.id, c.isActive)} />}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        {c.source !== 'SHOPIFY' && (
+                          <>
+                            <Button variant="ghost" size="icon" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -267,13 +357,13 @@ export default function CouponsPage() {
           <DialogHeader>
             <DialogTitle>{editing ? 'Edit Coupon' : 'Create Coupon'}</DialogTitle>
             <DialogDescription>
-              {editing ? 'Update coupon details' : 'Create a new discount code for affiliates or customers'}
+              {editing ? 'Update legacy Refferq coupon (Shopify codes are managed in Shopify)' : 'Create and activate a Shopify discount restricted to the chosen products and partner'}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label>Coupon Code *</Label>
-              <Input value={form.code} onChange={e => setForm({...form, code: e.target.value.toUpperCase()})} placeholder="SAVE20" className="font-mono" />
+              <Label>Coupon Code (optional — auto-generate if empty)</Label>
+              <Input value={form.code} onChange={e => setForm({...form, code: e.target.value.toUpperCase()})} placeholder="e.g. SARA10 — or leave blank to generate" className="font-mono" />
             </div>
             <div className="grid gap-2">
               <Label>Description</Label>
@@ -286,7 +376,7 @@ export default function CouponsPage() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="PERCENTAGE">Percentage (%)</SelectItem>
-                    <SelectItem value="FIXED">Fixed Amount (₹)</SelectItem>
+                    <SelectItem value="FIXED">Fixed Amount (E£)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -295,6 +385,29 @@ export default function CouponsPage() {
                 <Input type="number" value={form.discountValue} onChange={e => setForm({...form, discountValue: e.target.value})} placeholder="20" />
               </div>
             </div>
+            {!editing && (
+              <div className="space-y-2">
+                <Label>Products eligible for this Shopify discount *</Label>
+                {catalogError && <p role="alert" className="text-sm text-red-700">{catalogError}</p>}
+                <div className="max-h-44 space-y-1 overflow-y-auto rounded-lg border border-[#E4EBE6] p-2">
+                  {products.map(product => (
+                    <label key={product.id} className="flex cursor-pointer items-start gap-2 rounded px-2 py-2 text-sm hover:bg-[#EAF4ED]">
+                      <input type="checkbox" className="mt-1 accent-[#1F6B3A]"
+                        checked={form.productIds.includes(product.id)}
+                        onChange={e => setForm(previous => ({
+                          ...previous,
+                          productIds: e.target.checked
+                            ? [...previous.productIds, product.id]
+                            : previous.productIds.filter(id => id !== product.id),
+                        }))}/>
+                      <span>{product.title}</span>
+                    </label>
+                  ))}
+                  {!products.length && <p className="p-2 text-sm text-muted-foreground">No Shopify products available</p>}
+                </div>
+                <p className="text-xs text-muted-foreground">Only checked products receive the discount, including their variants.</p>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Max Uses</Label>
@@ -306,14 +419,19 @@ export default function CouponsPage() {
               </div>
             </div>
             <div className="grid gap-2">
-              <Label>Affiliate ID (optional)</Label>
-              <Input value={form.affiliateId} onChange={e => setForm({...form, affiliateId: e.target.value})} placeholder="Leave empty for program-wide coupon" />
+              <Label>Approved Affiliate {!editing && '*'}</Label>
+              <select className="rounded-md border border-[#E4EBE6] bg-white px-3 py-2 text-sm"
+                value={form.affiliateId} onChange={e => setForm({ ...form, affiliateId: e.target.value })}>
+                <option value="">Select an approved partner</option>
+                {partners.map(p => <option key={p.id} value={p.id}>{p.name} · {p.referralCode}</option>)}
+              </select>
             </div>
           </div>
+          {formError && <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>}
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving || !form.code || !form.discountValue}>
-              {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
+            <Button onClick={handleSave} disabled={saving || !form.discountValue || (!editing && (!form.affiliateId || !form.productIds.length || !!catalogError))}>
+              {saving ? 'Saving...' : editing ? 'Update legacy' : 'Create & Activate in Shopify'}
             </Button>
           </DialogFooter>
         </DialogContent>

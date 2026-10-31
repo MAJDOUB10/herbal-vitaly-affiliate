@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  IndianRupee,
+  Coins,
   MousePointerClick,
   Target,
   Users,
@@ -75,11 +75,21 @@ interface Referral {
   createdAt: string;
 }
 
+interface ShopifyTrackedOrder {
+  id: string;
+  orderName: string;
+  totalEGP: string;
+  currency: string;
+  updatedAt: string;
+  status: string;
+}
+
 export default function AffiliateDashboard() {
   const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<AffiliateStats | null>(null);
   const [referrals, setReferrals] = useState<Referral[]>([]);
-  const [currencySymbol, setCurrencySymbol] = useState('₹');
+  const [shopifyOrders, setShopifyOrders] = useState<ShopifyTrackedOrder[]>([]);
+  const [currencySymbol, setCurrencySymbol] = useState('E£');
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [copied, setCopied] = useState<'link' | 'code' | null>(null);
@@ -96,6 +106,10 @@ export default function AffiliateDashboard() {
   useEffect(() => {
     if (!authLoading && user) {
       loadDashboardData();
+      fetch('/api/affiliate/shopify-orders', { cache: 'no-store' })
+        .then(response => response.ok ? response.json() : null)
+        .then(result => { if (result?.success) setShopifyOrders(result.orders || []); })
+        .catch(() => { /* Order tracking is informational; never block dashboard. */ });
     }
   }, [authLoading, user]);
 
@@ -116,11 +130,11 @@ export default function AffiliateDashboard() {
           conversionRate: data.stats?.conversionRate || 0,
           referralLink: `${window.location.origin}/r/${data.affiliate?.referralCode}`,
           referralCode: data.affiliate?.referralCode || '',
-          currencySymbol: data.currencySymbol || '₹',
+          currencySymbol: data.currencySymbol || 'E£',
           nextMaturesAt: data.stats?.nextMaturesAt || null,
         });
         setReferrals(data.referrals || []);
-        setCurrencySymbol(data.currencySymbol || '₹');
+        setCurrencySymbol(data.currencySymbol || 'E£');
       }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
@@ -235,7 +249,7 @@ export default function AffiliateDashboard() {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.2 }}
       >
-        <Card className="bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 text-white border-0 shadow-lg overflow-hidden relative group">
+        <Card className="bg-gradient-to-br from-[#1F6B3A] via-teal-600 to-cyan-700 text-white border-0 shadow-lg overflow-hidden relative group">
           <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl -translate-x-full group-hover:translate-x-full" />
           <CardContent className="flex items-center justify-between p-6 relative z-10">
             <div className="flex items-center gap-5">
@@ -247,7 +261,7 @@ export default function AffiliateDashboard() {
                 <p className="text-xl font-bold mt-1 tracking-tight">Start referring today and grow your wealth!</p>
               </div>
             </div>
-            <Button variant="secondary" onClick={() => setShowSubmitModal(true)} className="gap-2 hidden sm:flex bg-white text-emerald-700 hover:bg-emerald-50 border-0 shadow-md transform transition hover:scale-105 active:scale-95">
+            <Button variant="secondary" onClick={() => setShowSubmitModal(true)} className="gap-2 hidden sm:flex bg-white text-[#18572F] hover:bg-[#EAF4ED] border-0 shadow-md transform transition hover:scale-105 active:scale-95">
               <Plus className="h-4 w-4" />
               Submit Lead
             </Button>
@@ -262,8 +276,8 @@ export default function AffiliateDashboard() {
             label: 'Available Balance',
             value: formatCurrency(stats?.totalEarnings || 0),
             icon: Banknote,
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-500/10',
+            color: 'text-primary',
+            bg: 'bg-primary/10',
             description: 'Ready for payout'
           },
           {
@@ -276,7 +290,7 @@ export default function AffiliateDashboard() {
               ? `Next maturity: ${new Date(stats.nextMaturesAt).toLocaleDateString()}`
               : 'Held for refund period'
           },
-          { label: 'Total Clicks', value: stats?.totalClicks || 0, icon: MousePointerClick, color: 'text-blue-600', bg: 'bg-blue-500/10' },
+          { label: 'Total Clicks', value: stats?.totalClicks || 0, icon: MousePointerClick, color: 'text-primary', bg: 'bg-primary/10' },
           { label: 'Total Leads', value: stats?.totalLeads || 0, icon: Target, color: 'text-rose-600', bg: 'bg-rose-500/10' },
           { label: 'Conv. Rate', value: `${stats?.conversionRate?.toFixed(1) || '0.0'}%`, icon: TrendingUp, color: 'text-violet-600', bg: 'bg-violet-500/10' },
         ].map((stat, i) => (
@@ -338,7 +352,7 @@ export default function AffiliateDashboard() {
           ) : (
             <>
               <div className="space-y-2">
-                <Label>Referral Link</Label>
+                <Label>Referral Link — Herbal Vitaly Shop</Label>
                 <div className="flex gap-2">
                   <Input readOnly value={stats?.referralLink || ''} className="font-mono text-sm" />
                   <Button
@@ -346,9 +360,13 @@ export default function AffiliateDashboard() {
                     size="icon"
                     onClick={() => copyToClipboard(stats?.referralLink || '', 'link')}
                   >
-                    {copied === 'link' ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                    {copied === 'link' ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  This link sends customers to herbalvitaly.com and tracks partner visits. Shopify
+                  orders appear below after storefront cart tracking and secure webhook setup.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Referral Code</Label>
@@ -359,11 +377,55 @@ export default function AffiliateDashboard() {
                     size="icon"
                     onClick={() => copyToClipboard(stats?.referralCode || '', 'code')}
                   >
-                    {copied === 'code' ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                    {copied === 'code' ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
             </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Shopify tracking — read-only orders, not commission approvals. */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Shopify Orders — Herbal Vitaly</CardTitle>
+          <CardDescription>
+            Orders attributed to your referral code. COD delivery, collection and finance
+            checks are required before any commission is approved.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {shopifyOrders.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No linked Shopify orders yet. Share your referral link above; completed orders
+              will appear here after Shopify tracking and webhook integration are activated.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {shopifyOrders.map(order => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.orderName}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(order.updatedAt).toLocaleDateString('en-EG')}
+                      </TableCell>
+                      <TableCell><Badge variant="outline">{order.status.replaceAll('_', ' ')}</Badge></TableCell>
+                      <TableCell className="text-right">{order.totalEGP} EGP</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -419,7 +481,7 @@ export default function AffiliateDashboard() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/affiliate/referrals'}>
           <CardContent className="p-5 flex items-center gap-3">
-            <Users className="h-5 w-5 text-blue-600" />
+            <Users className="h-5 w-5 text-primary" />
             <div>
               <p className="font-medium">Manage Referrals</p>
               <p className="text-xs text-muted-foreground">View all your submissions</p>
@@ -429,7 +491,7 @@ export default function AffiliateDashboard() {
         </Card>
         <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/affiliate/reports'}>
           <CardContent className="p-5 flex items-center gap-3">
-            <TrendingUp className="h-5 w-5 text-emerald-600" />
+            <TrendingUp className="h-5 w-5 text-primary" />
             <div>
               <p className="font-medium">View Reports</p>
               <p className="text-xs text-muted-foreground">Analyze your performance</p>

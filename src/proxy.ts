@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { prisma } from '@/lib/prisma';
+import { passwordSessionVersion } from '@/lib/password-auth-policy';
 
 /**
  * Staging security boundary for routes that previously trusted client-supplied
@@ -35,9 +36,10 @@ export async function proxy(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { id: true, role: true, status: true },
+      select: { id: true, role: true, status: true, password: true },
     });
     if (!user || user.status !== 'ACTIVE') return deny(401);
+    if (typeof payload.pv !== 'string' || payload.pv !== passwordSessionVersion(user.password)) return deny(401);
     if (requiresAdmin && user.role !== 'ADMIN') return deny(403);
 
     // Never accept identity headers from the browser or another untrusted client.

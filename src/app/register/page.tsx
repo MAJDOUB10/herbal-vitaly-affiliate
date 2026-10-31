@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { BrandIdentity } from '@/components/brand/BrandIdentity';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,15 +21,16 @@ import {
   InputOTPSeparator,
 } from '@/components/ui/input-otp';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Target, User, Mail, ShieldCheck, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import { User, Mail, ShieldCheck, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
 
 type Step = 'details' | 'otp' | 'success';
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [step, setStep] = useState<Step>('details');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -38,6 +39,10 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (password.length < 12 || password.length > 128 || password !== confirmPassword) {
+      setError('Use a password of 12–128 characters and confirm it correctly.');
+      return;
+    }
     setLoading(true);
 
     try {
@@ -45,7 +50,7 @@ export default function RegisterPage() {
       const registerRes = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name, role: 'AFFILIATE' }),
+        body: JSON.stringify({ email, name, password, role: 'AFFILIATE' }),
       });
 
       const registerData = await registerRes.json();
@@ -56,22 +61,13 @@ export default function RegisterPage() {
         return;
       }
 
-      // Step 2: Send OTP
-      const otpRes = await fetch('/api/auth/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      const otpData = await otpRes.json();
-
-      if (otpRes.ok) {
-        setStep('otp');
-        setMessage('Account created! A verification code has been sent to your email.');
+      // Registration API already sends the first OTP. A second request
+      // immediately afterwards would be rejected by the 60-second cooldown.
+      setStep('otp');
+      if (registerData.otpSent) {
+        setMessage('Verification code sent. Check your inbox.');
       } else {
-        // Registration succeeded but OTP failed - still move to OTP step
-        setStep('otp');
-        setError(otpData.error || 'Failed to send code. Try resending.');
+        setError('Your account was created, but email delivery failed. Use Resend code to retry.');
       }
     } catch (_e) {
       setError('Something went wrong. Please try again.');
@@ -101,15 +97,7 @@ export default function RegisterPage() {
 
       if (res.ok && data.success) {
         setStep('success');
-        // Redirect after a short delay
-        setTimeout(() => {
-          const user = data.user;
-          if (user.role === 'ADMIN') {
-            router.push('/admin');
-          } else {
-            router.push('/affiliate');
-          }
-        }, 2000);
+        setMessage(data.message || 'Your email is verified. You can sign in when approved.');
       } else {
         setError(data.error || 'Invalid verification code');
       }
@@ -145,21 +133,13 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
+    <div className="hv-auth-shell">
       <div className="w-full max-w-md space-y-6">
-        {/* Logo */}
-        <div className="text-center space-y-2">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/25">
-            <Target className="h-7 w-7 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">Refferq</h1>
-          <p className="text-sm text-muted-foreground">
-            Affiliate Marketing Platform
-          </p>
-        </div>
+        {/* Official Herbal Vitaly identity */}
+        <BrandIdentity />
 
         {/* Card */}
-        <Card className="border-0 shadow-xl shadow-black/5">
+        <Card className="hv-auth-card">
           {step === 'details' && (
             <>
               <CardHeader className="text-center pb-4">
@@ -208,13 +188,27 @@ export default function RegisterPage() {
                       />
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="register-password">Password</Label>
+                    <Input id="register-password" type="password" autoComplete="new-password"
+                      value={password} minLength={12} maxLength={128}
+                      onChange={e => setPassword(e.target.value)} required
+                      placeholder="At least 12 characters" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirm password</Label>
+                    <Input id="confirm-password" type="password" autoComplete="new-password"
+                      value={confirmPassword} minLength={12} maxLength={128}
+                      onChange={e => setConfirmPassword(e.target.value)} required
+                      placeholder="Repeat your password" />
+                  </div>
                 </CardContent>
                 <CardFooter className="flex-col gap-4">
                   <Button
                     type="submit"
                     className="w-full"
                     size="lg"
-                    disabled={loading || !name || !email}
+                    disabled={loading || !name || !email || password.length < 12 || password !== confirmPassword}
                   >
                     {loading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -322,12 +316,10 @@ export default function RegisterPage() {
                 <div>
                   <h3 className="text-lg font-semibold">Welcome aboard, {name}!</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Your account has been created. Redirecting to your dashboard...
+                    {message || 'Your email is verified. Your application awaits administrator approval.'}
                   </p>
                 </div>
-                <div className="flex justify-center">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
+                <Link href="/login" className="inline-block rounded-md bg-primary px-5 py-2 text-sm font-semibold text-white hover:opacity-90">Go to sign in</Link>
               </div>
             </CardContent>
           )}

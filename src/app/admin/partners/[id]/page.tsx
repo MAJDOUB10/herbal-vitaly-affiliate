@@ -390,8 +390,8 @@ export default function PartnerDetailPage() {
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
-                <Users className="h-4 w-4 text-blue-600" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <Users className="h-4 w-4 text-primary" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{customers.length}</p>

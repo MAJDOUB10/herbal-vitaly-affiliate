@@ -196,13 +196,14 @@ export default function SettingsPage() {
             <Key className="h-5 w-5" />
             Security
           </CardTitle>
-          <CardDescription>Authentication is managed via OTP</CardDescription>
+          <CardDescription>Password and account security</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            This platform uses passwordless OTP-based authentication. A one-time code is sent to your
-            email each time you log in. No password management is required.
+            Sign-in uses your verified email address and password. To change a forgotten password,
+            use the email recovery flow. Changing your password invalidates older sessions.
           </p>
+          <div className="pt-3"><a href="/forgot-password" className="font-medium text-primary underline">Reset account password</a></div>
         </CardContent>
       </Card>
     </div>

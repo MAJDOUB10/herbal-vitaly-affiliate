@@ -63,10 +63,17 @@ export async function GET(request: NextRequest) {
     const totalCommissions = commissions.length;
     const pendingCommissionsCount = pendingCommissionsList.length;
     const totalConversions = conversions.length;
-    const totalClicks = referrals.reduce((sum, r) => {
-      const metadata = r.metadata as any;
-      return sum + (metadata?.clicks || 0);
-    }, 0);
+    // Real unique click rows are stored in ReferralClick; the old
+    // metadata.clicks counter was never updated and incorrectly showed zero.
+    const totalClicks = await prisma.referralClick.count({
+      where: { referral: { affiliateId: affiliate.id } },
+    });
+    // Synthetic click visitors are not leads/customers and must not appear
+    // in the affiliate's Recent Referrals table or conversion denominator.
+    const actualLeads = referrals.filter(r => {
+      const metadata = r.metadata as Record<string, unknown> | null;
+      return metadata?.source !== 'referral_link';
+    });
     const conversionRate = totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0;
 
     // Next maturation date for pending commissions
@@ -87,7 +94,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Map referrals to include estimatedValue from metadata
-    const mappedReferrals = referrals.map(ref => {
+    const mappedReferrals = actualLeads.map(ref => {
       const metadata = ref.metadata as any;
       return {
         ...ref,

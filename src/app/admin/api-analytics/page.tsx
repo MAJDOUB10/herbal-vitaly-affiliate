@@ -109,7 +109,7 @@ export default function ApiAnalyticsPage() {
 
   const statusColor = (code: number) => {
     if (code < 300) return 'bg-green-500';
-    if (code < 400) return 'bg-blue-500';
+    if (code < 400) return 'bg-primary';
     if (code < 500) return 'bg-yellow-500';
     return 'bg-red-500';
   };
@@ -124,7 +124,7 @@ export default function ApiAnalyticsPage() {
   const methodColor = (method: string) => {
     switch (method) {
       case 'GET': return 'text-green-600';
-      case 'POST': return 'text-blue-600';
+      case 'POST': return 'text-primary';
       case 'PUT': return 'text-yellow-600';
       case 'PATCH': return 'text-orange-600';
       case 'DELETE': return 'text-red-600';

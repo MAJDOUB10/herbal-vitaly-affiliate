@@ -1,86 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { otpService } from '@/lib/otp';
-import { SignJWT } from 'jose';
+import { prisma } from '@/lib/prisma';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { normalizeLoginEmail, isValidLoginEmail, hashedLoginIdentifier } from '@/lib/password-auth-policy';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET!
-);
-
+/** OTP is used only to verify a NEW account. It never grants a login session. */
 export async function POST(request: NextRequest) {
   try {
-    // Rate limit: 5 verify attempts per minute per IP
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-      || request.headers.get('x-real-ip')
-      || 'unknown';
-    const rateLimit = await checkRateLimit(ip, 'auth/verify-otp', 5, 60 * 1000);
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: 'Too many verification attempts. Please try again later.' },
-        { status: 429, headers: { 'Retry-After': Math.ceil((rateLimit.resetAt.getTime() - Date.now()) / 1000).toString() } }
-      );
-    }
+    if (!process.env.JWT_SECRET) return NextResponse.json({ success: false, error: 'Verification unavailable' }, { status: 503 });
+    const body = await request.json();
+    const email = normalizeLoginEmail(body?.email);
+    const code = body?.code;
+    if (!isValidLoginEmail(email) || typeof code !== 'string' || !/^\d{6}$/.test(code))
+      return NextResponse.json({ success: false, error: 'Invalid code' }, { status: 400 });
 
-    const { email, code } = await request.json();
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const [one, two] = await Promise.all([
+      checkRateLimit(ip, 'auth/verify-registration-ip', 5, 60_000),
+      checkRateLimit(hashedLoginIdentifier(email, process.env.JWT_SECRET), 'auth/verify-registration-account', 8, 15 * 60_000),
+    ]);
+    if (!one.allowed || !two.allowed) return NextResponse.json({ success: false, error: 'Too many attempts' }, { status: 429 });
 
-    if (!email || !code) {
-      return NextResponse.json(
-        { error: 'Email and code are required' },
-        { status: 400 }
-      );
-    }
+    // Prevent this legacy OTP route from becoming an alternate passwordless login.
+    const account = await prisma.user.findUnique({ where: { email }, select: { status: true } });
+    if (!account || account.status !== 'PENDING')
+      return NextResponse.json({ success: false, error: 'Account verification unavailable' }, { status: 400 });
 
     const result = await otpService.verifyOTP(email, code);
-
-    if (!result.success) {
-      return NextResponse.json(
-        { error: result.message },
-        { status: 400 }
-      );
-    }
-
-    const user = result.user!;
-
-    // Generate JWT token
-    const token = await new SignJWT({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name
-    })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('24h')
-      .sign(JWT_SECRET);
-
-    // Set cookie
-    const response = NextResponse.json({
+    if (!result.success) return NextResponse.json({ success: false, error: result.message }, { status: 400 });
+    return NextResponse.json({
       success: true,
-      message: result.message,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        hasAffiliate: !!user.affiliate
-      }
-    });
-
-    response.cookies.set('auth-token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 86400, // 24 hours
-      path: '/'
-    });
-
-    return response;
-
-  } catch (error) {
-    console.error('OTP verify error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+      pendingApproval: Boolean(result.pendingApproval),
+      message: result.pendingApproval
+        ? 'Email verified. Await administrator approval before signing in.'
+        : 'Email verified. Sign in with the password you created.',
+    }, { headers: { 'Cache-Control': 'no-store' } });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Verification failed' }, { status: 500 });
   }
 }

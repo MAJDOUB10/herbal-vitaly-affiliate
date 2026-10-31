@@ -1,0 +1,76 @@
+{% comment %}
+HERBAL VITALY — Shopify checkout attribution (v1)
+Install once in theme.liquid, immediately before </body>:
+  {% render 'hv-affiliate-tracking' %}
+No Shopify Admin API key is needed; only the current customer's cart is updated.
+Never copy the partner-dashboard cookie: Shopify cart attributes carry signed,
+time-limited attribution through checkout to orders/create + orders/updated.
+{% endcomment %}
+<script>
+(function () {
+  'use strict';
+  var STORAGE_KEY = 'hv_affiliate_referral_v1';
+  var MAX_AGE = 30 * 24 * 60 * 60 * 1000;
+  var CODE = /^[A-Za-z0-9][A-Za-z0-9_-]{1,99}$/;
+  var TOKEN = /^hv1\.[A-Za-z0-9_-]+\.attr_[A-Za-z0-9_]+\.\d{12,15}\.[A-Za-z0-9_-]{43}$/;
+
+  function consentAllowed() {
+    try {
+      return !(window.Shopify && window.Shopify.customerPrivacy &&
+        typeof window.Shopify.customerPrivacy.analyticsProcessingAllowed === 'function') ||
+        window.Shopify.customerPrivacy.analyticsProcessingAllowed();
+    } catch (e) { return false; }
+  }
+
+  function loadAttribution() {
+    var now = Date.now(), query = new URLSearchParams(window.location.search);
+    var code = query.get('hv_ref'), token = query.get('hv_token');
+    var key = query.get('hv_attr');
+    if (code && key && token && CODE.test(code) && TOKEN.test(token) &&
+        token.split('.')[1] === code && token.split('.')[2] === key) {
+      var value = { code: code, key: key, token: token, recordedAt: now };
+      try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value)); } catch (e) {}
+      return value;
+    }
+    try {
+      var stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null');
+      if (stored && stored.recordedAt && now - stored.recordedAt <= MAX_AGE &&
+          CODE.test(stored.code) && TOKEN.test(stored.token) &&
+          stored.token.split('.')[1] === stored.code && stored.token.split('.')[2] === stored.key) {
+        return stored;
+      }
+      window.localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {}
+    return null;
+  }
+
+  var inFlight = false;
+  function syncCart() {
+    if (!consentAllowed() || inFlight) return;
+    var value = loadAttribution();
+    if (!value) return;
+    var root = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) || '/';
+    inFlight = true;
+    fetch(root + 'cart/update.js', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ attributes: {
+        hv_affiliate_code: value.code,
+        hv_attribution_key: value.key,
+        hv_affiliate_token: value.token
+      } })
+    }).then(function (response) {
+      if (!response.ok) console.warn('HV affiliate cart attribution not saved:', response.status);
+    }).catch(function () {
+      // Don't interrupt checkout or purchases if tracking is unavailable.
+    }).finally(function () { inFlight = false; });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', syncCart, { once: true });
+  } else { syncCart(); }
+  document.addEventListener('visitorConsentCollected', syncCart);
+  document.addEventListener('cart:updated', syncCart);
+})();
+</script>
