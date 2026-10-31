@@ -188,7 +188,7 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
     anchor.click(); URL.revokeObjectURL(url);
   };
 
-  return <main className="space-y-5 pb-10">
+  return <main lang="en" className="space-y-5 pb-10">
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[.16em] text-[#1F6B3A]">Herbal Vitaly Affiliate Hub</p>
@@ -309,69 +309,69 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel id="return-reasons" title="Motifs de retour" subtitle="Transparence des données Bosta / Shopify">
+        <Panel id="return-reasons" title="Return reasons" subtitle="Bosta / Shopify data availability">
           <div className="flex min-h-28 items-center gap-3 rounded-xl bg-slate-50 p-4">
             <RotateCcw className="h-7 w-7 text-slate-400"/>
-            <p className="text-sm text-slate-600">Motifs détaillés non encore transmis au modèle de commandes Refferq. <strong>{totals.returned} remboursée(s)</strong> et <strong>{totals.cancelled} annulée(s)</strong> dans la sélection. Aucun motif ne sera deviné.</p>
+            <p className="text-sm text-slate-600">Detailed return reasons are not yet available in Refferq order records. <strong>{totals.returned} refunded</strong> et <strong>{totals.cancelled} cancelled</strong> within the selection. No reasons are inferred.</p>
           </div>
         </Panel>
-        <Panel id="payout-overview" title="Commissions enregistrées" subtitle="Soldes issus du registre des commissions, pas d'estimations automatiques sur les commandes COD">
+        <Panel id="payout-overview" title="Recorded commissions" subtitle="Amounts from the commission ledger — not automatic estimates on COD orders">
           <div className="grid grid-cols-3 gap-3">
-            {[['En attente',data.finance.pendingEGP],['Approuvées',data.finance.approvedEGP],['Payées',data.finance.paidEGP]].map(([label,value]) =>
+            {[['Pending',data.finance.pendingEGP],['Approved',data.finance.approvedEGP],['Paid',data.finance.paidEGP]].map(([label,value]) =>
               <div key={String(label)} className="rounded-xl bg-[#F5F9F6] p-3">
                 <p className="text-xs text-slate-500">{label}</p>
                 <p className="mt-2 break-words text-sm font-bold">{formatMoney(Number(value))}</p>
               </div>)}
           </div>
-          <p className="mt-3 text-xs text-amber-800">Paiement uniquement après livraison, collecte COD/Bosta et validation financière.</p>
+          <p className="mt-3 text-xs text-amber-800">Payouts only after delivery, COD/Bosta collection, and financial approval.</p>
         </Panel>
       </div>
 
-      {!admin && <Panel title="Mon lien affilié" subtitle="Partagez un lien vers la boutique ou vers un produit spécifique.">
+      {!admin && <Panel title="My affiliate link" subtitle="Share a link to the store or to a specific product.">
         <div className="grid gap-3 md:grid-cols-2">
-          {[['Lien boutique','https://partner.herbalvitaly.com/r/' + (data.referralCode || '')],['Code de parrainage',data.referralCode || '—']].map(([label,value]) =>
+          {[['Store link','https://partner.herbalvitaly.com/r/' + (data.referralCode || '')],['Referral code',data.referralCode || '—']].map(([label,value]) =>
             <div key={label}><p className="mb-1 text-xs text-slate-500">{label}</p>
               <div className="flex items-center gap-2"><input readOnly value={value} onFocus={e=>e.currentTarget.select()} className="w-full min-w-0 rounded-lg border p-2 text-xs"/>
-                <button type="button" onClick={()=>copy(value)} title="Copier" className="rounded-lg border p-2 text-[#1F6B3A]"><ClipboardCopy className="h-4 w-4"/></button>
+                <button type="button" onClick={()=>copy(value)} title="Copy" className="rounded-lg border p-2 text-[#1F6B3A]"><ClipboardCopy className="h-4 w-4"/></button>
               </div>
             </div>)}
         </div>
       </Panel>}
 
-      <Panel id="shopify-products" title={admin ? 'Catalogue Shopify' : 'Mes liens produits Shopify'}
-        subtitle={admin ? 'Produits actifs publiés sur herbalvitaly.com, avec accès direct aux pages.' :
-          'Liens attribués à votre compte avec code Shopify ; seuls les coupons actifs et vérifiés sont présentés.'}>
-        {catalogError && <p role="alert" className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Catalogue indisponible : {catalogError}</p>}
-        {!admin && <label className="mb-3 block text-xs text-slate-500">Filtrer les liens par produit
+      <Panel id="shopify-products" title={admin ? 'Shopify catalog' : 'My Shopify product links'}
+        subtitle={admin ? 'Published products on herbalvitaly.com with direct links to product pages.' :
+          'Product links assigned to your account; only active, verified Shopify coupons are shown.'}>
+        {catalogError && <p role="alert" className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Catalog unavailable: {catalogError}</p>}
+        {!admin && <label className="mb-3 block text-xs text-slate-500">Filter product links
           <select className="mt-1 w-full rounded-lg border bg-white p-2 text-sm sm:w-72" value={productFilter} onChange={e=>setProductFilter(e.target.value)}>
-            <option value="">Tous les produits</option>
+            <option value="">All products</option>
             {[...new Map(coupons.flatMap(c=>c.products).map(p=>[p.handle,p.title] as const)).entries()].map(([handle,title])=><option key={handle} value={handle}>{title}</option>)}
           </select></label>}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[#F6FAF7] text-xs text-slate-500"><tr><th className="px-3 py-3">Produit</th><th className="px-3 py-3">Page Shopify</th><th className="px-3 py-3">{admin ? 'Catalogue' : 'Discount code'}</th>{!admin && <th className="px-3 py-3">Lien affilié</th>}</tr></thead>
+            <thead className="bg-[#F6FAF7] text-xs text-slate-500"><tr><th className="px-3 py-3">Product</th><th className="px-3 py-3">Shopify page</th><th className="px-3 py-3">{admin ? 'Catalog' : 'Discount code'}</th>{!admin && <th className="px-3 py-3">Affiliate link</th>}</tr></thead>
             <tbody className="divide-y divide-[#E4EBE6]">
               {admin ? products.map(p => <tr key={p.id}><td className="px-3 py-3 font-medium">{p.title}</td>
-                <td className="px-3 py-3"><a className="inline-flex items-center gap-1 text-[#1F6B3A] underline" href={p.onlineStoreUrl!} target="_blank" rel="noopener noreferrer">Voir produit <ExternalLink className="h-3.5 w-3.5"/></a></td>
-                <td className="px-3 py-3"><Link className="text-[#1F6B3A] underline" href="/admin/coupons">Voir ses remises</Link></td></tr>)
+                <td className="px-3 py-3"><a className="inline-flex items-center gap-1 text-[#1F6B3A] underline" href={p.onlineStoreUrl!} target="_blank" rel="noopener noreferrer">View product <ExternalLink className="h-3.5 w-3.5"/></a></td>
+                <td className="px-3 py-3"><Link className="text-[#1F6B3A] underline" href="/admin/coupons">View discounts</Link></td></tr>)
                 : productLinks.map(p => <tr key={p.code+'-'+p.handle}><td className="px-3 py-3 font-medium">{p.title}</td>
-                  <td className="px-3 py-3"><a className="inline-flex items-center gap-1 text-[#1F6B3A] underline" href={p.productUrl} target="_blank" rel="noopener noreferrer">Ouvrir <ExternalLink className="h-3.5 w-3.5"/></a></td>
+                  <td className="px-3 py-3"><a className="inline-flex items-center gap-1 text-[#1F6B3A] underline" href={p.productUrl} target="_blank" rel="noopener noreferrer">Open <ExternalLink className="h-3.5 w-3.5"/></a></td>
                   <td className="px-3 py-3"><span className="rounded-md bg-[#EAF4ED] px-2 py-1 font-mono text-xs">{p.code}</span></td>
-                  <td className="px-3 py-3"><button onClick={()=>copy(p.affiliateLink)} className="inline-flex items-center gap-1 text-xs font-semibold text-[#1F6B3A]"><ClipboardCopy className="h-3.5 w-3.5"/>{copied===p.affiliateLink?'Copié':'Copier le lien'}</button></td></tr>)}
+                  <td className="px-3 py-3"><button onClick={()=>copy(p.affiliateLink)} className="inline-flex items-center gap-1 text-xs font-semibold text-[#1F6B3A]"><ClipboardCopy className="h-3.5 w-3.5"/>{copied===p.affiliateLink?'Copied':'Copy link'}</button></td></tr>)}
             </tbody>
           </table>
-          {(admin ? products.length === 0 : productLinks.length === 0) && !catalogError && <p className="p-5 text-sm text-slate-500">Aucun produit ou coupon disponible pour ce compte.</p>}
+          {(admin ? products.length === 0 : productLinks.length === 0) && !catalogError && <p className="p-5 text-sm text-slate-500">No products or coupons available for this account.</p>}
         </div>
       </Panel>
 
-      <Panel id="order-list" title={admin ? 'Commandes Shopify · Tous les partenaires' : 'Mes commandes attribuées'}
-        subtitle="Aucune commande ne vaut commission payable avant rapprochement COD/Bosta. Les motifs de retour et les produits ne sont pas encore synchronisés par ligne.">
+      <Panel id="order-list" title={admin ? 'Shopify orders · All partners' : 'My attributed orders'}
+        subtitle="Orders do not create payable commissions before COD/Bosta reconciliation. Return reasons and order line items are not yet synchronized.">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-[#F6FAF7] text-xs text-slate-500">
-              <tr><th className="p-3">Commande</th><th className="p-3">Date</th>{admin && <th className="p-3">Partenaire</th>}
-                <th className="p-3">Code</th><th className="p-3">Source</th><th className="p-3">Livraison</th>
-                <th className="p-3">Retour</th><th className="p-3">Rapprochement</th><th className="p-3 text-right">Total</th></tr>
+              <tr><th className="p-3">Order</th><th className="p-3">Date</th>{admin && <th className="p-3">Partner</th>}
+                <th className="p-3">Code</th><th className="p-3">Source</th><th className="p-3">Delivery</th>
+                <th className="p-3">Return</th><th className="p-3">Reconciliation</th><th className="p-3 text-right">Total</th></tr>
             </thead>
             <tbody className="divide-y divide-[#E4EBE6]">
               {rows.slice(0, 60).map(o => <tr key={o.id} className="hover:bg-[#FBFDFB]">
@@ -382,23 +382,23 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
                 <td className="p-3 font-mono text-xs">{o.code || '—'}</td>
                 <td className="p-3 text-xs">{statusNames[o.source] || o.source}</td>
                 <td className="p-3"><span className={'rounded-md px-2 py-1 text-xs ' + (statusColor[o.status]||'bg-slate-50 text-slate-700')}>{statusNames[o.status]||o.status}</span></td>
-                <td className="p-3 text-xs text-slate-500">{o.returnReason || 'Non renseigné'}</td>
-                <td className="p-3 text-xs">{o.reconciled ? <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 className="h-3 w-3"/> Oui</span> : 'En attente'}</td>
+                <td className="p-3 text-xs text-slate-500">{o.returnReason || 'Not provided'}</td>
+                <td className="p-3 text-xs">{o.reconciled ? <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 className="h-3 w-3"/> Yes</span> : 'Pending'}</td>
                 <td className="whitespace-nowrap p-3 text-right font-semibold">{formatMoney(o.totalEGP)}</td>
               </tr>)}
             </tbody>
           </table>
           {!rows.length && <p className="p-5 text-center text-sm text-slate-500">{empty}</p>}
         </div>
-        {rows.length>60 && <p className="mt-3 text-xs text-slate-500">60 commandes visibles ici. Utilisez les filtres ou exportez le CSV pour la sélection entière.</p>}
+        {rows.length>60 && <p className="mt-3 text-xs text-slate-500">Showing the first 60 orders. Filter the table or export CSV for the full selection.</p>}
       </Panel>
-      {admin && <Panel title="Classement partenaires" subtitle="Valeur des commandes synchronisées attribuées (pas le chiffre d'affaires encaissé).">
+      {admin && <Panel title="Partner performance" subtitle="Value of attributed synchronized orders (not collected revenue).">
         <div className="overflow-x-auto"><table className="w-full text-left text-sm">
-          <thead className="bg-[#F6FAF7] text-xs text-slate-500"><tr><th className="p-3">Partenaire</th><th className="p-3">Commandes</th><th className="p-3">Livrées</th><th className="p-3">Remboursées</th><th className="p-3 text-right">Valeur</th></tr></thead>
+          <thead className="bg-[#F6FAF7] text-xs text-slate-500"><tr><th className="p-3">Partner</th><th className="p-3">Orders</th><th className="p-3">Delivered</th><th className="p-3">Refunded</th><th className="p-3 text-right">Order value</th></tr></thead>
           <tbody className="divide-y">{partnerRank.map(p=><tr key={p.id}><td className="p-3">{p.name}</td><td className="p-3">{p.orders}</td><td className="p-3">{p.delivered}</td><td className="p-3">{p.returns}</td><td className="p-3 text-right">{formatMoney(p.revenue)}</td></tr>)}</tbody>
-        </table>{!partnerRank.length && <p className="p-3 text-sm text-slate-500">Aucune commande attribuée.</p>}</div>
+        </table>{!partnerRank.length && <p className="p-3 text-sm text-slate-500">No attributed orders.</p>}</div>
       </Panel>}
-      <p className="text-xs text-slate-500">Données : commandes enregistrées dans Refferq, clics et registre de commissions. Montants EGP. Les produits de chaque commande et les motifs détaillés de retour nécessitent un enrichissement Shopify/Bosta séparé.</p>
+      <p className="text-xs text-slate-500">Data sources: Refferq orders, tracked clicks, and commission ledger. All amounts in EGP. Per-order products and detailed return reasons require additional Shopify/Bosta synchronization.</p>
     </>}
   </main>;
 }
