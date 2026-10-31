@@ -36,6 +36,7 @@ export function linkField(v: unknown): string | null {
   return x;
 }
 export function dateField(v: unknown): Date | null {
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v;
   const x = textField(v, 40);
   if (!x) return null;
   const d = new Date(x);
