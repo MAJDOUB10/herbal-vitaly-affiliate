@@ -31,18 +31,18 @@ type Coupon = { id: string; code: string; products: Array<{
 const green = '#1F6B3A';
 const formatMoney = (n: number | null) => n == null ? '—' :
   new Intl.NumberFormat('en-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + ' EGP';
-const dayLabel = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+const dayLabel = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 const statusNames: Record<string, string> = {
-  PENDING: 'Livraison en attente', DELIVERED: 'Livrée', REFUNDED: 'Remboursée',
-  CANCELLED: 'Annulée', AFFILIATE_LINK: 'Lien affilié', PROMO_CODE: 'Code promo',
-  LINK_AND_PROMO: 'Lien + code', UNATTRIBUTED: 'Sans attribution',
-  UNVERIFIED: 'Non vérifiée', CONFLICT: 'Conflit',
+  PENDING: 'Pending delivery', DELIVERED: 'Delivered', REFUNDED: 'Refunded',
+  CANCELLED: 'Cancelled', AFFILIATE_LINK: 'Affiliate link', PROMO_CODE: 'Discount code',
+  LINK_AND_PROMO: 'Link + code', UNATTRIBUTED: 'Unattributed',
+  UNVERIFIED: 'Unverified', CONFLICT: 'Attribution conflict',
 };
 const statusColor: Record<string, string> = {
   DELIVERED: 'bg-emerald-50 text-emerald-800', PENDING: 'bg-amber-50 text-amber-800',
   REFUNDED: 'bg-rose-50 text-rose-800', CANCELLED: 'bg-rose-50 text-rose-800',
 };
-const empty = 'Aucune donnée pour ces filtres';
+const empty = 'No records match these filters';
 
 function Metric({ title, value, note, icon: Icon, accent = green }: {
   title: string; value: string; note?: string; icon: typeof ShoppingBag; accent?: string;
@@ -94,7 +94,7 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
     fetch('/api/dashboard/insights?' + params.toString(), { cache: 'no-store' })
       .then(async response => {
         const json = await response.json();
-        if (!response.ok || !json.success) throw new Error(json.error || 'Données indisponibles');
+        if (!response.ok || !json.success) throw new Error(json.error || 'Dashboard data unavailable');
         if (active) setData(json);
       }).catch(err => { if (active) { setError(err.message); setData(null); } })
       .finally(() => { if (active) setLoading(false); });
@@ -108,7 +108,7 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
     fetch(endpoint, { cache: 'no-store' })
       .then(async response => {
         const json = await response.json();
-        if (!response.ok || !json.success) throw new Error(json.error || 'Catalogue Shopify indisponible');
+        if (!response.ok || !json.success) throw new Error(json.error || 'Shopify catalog unavailable');
         if (!active) return;
         if (admin) setProducts((json.products || []).filter((p: Product) =>
           typeof p.onlineStoreUrl === 'string' && p.onlineStoreUrl.startsWith('https://herbalvitaly.com/')));
@@ -150,17 +150,17 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
   }, [rows, data, days]);
 
   const statusChart = [
-    { name: 'Livrées', value: totals.delivered, color: green },
-    { name: 'En attente', value: totals.pending, color: '#E7A43F' },
-    { name: 'Remboursées', value: totals.returned, color: '#DE6676' },
-    { name: 'Annulées', value: totals.cancelled, color: '#9BABB0' },
+    { name: 'Delivered', value: totals.delivered, color: green },
+    { name: 'Pending', value: totals.pending, color: '#E7A43F' },
+    { name: 'Refunded', value: totals.returned, color: '#DE6676' },
+    { name: 'Cancelled', value: totals.cancelled, color: '#9BABB0' },
   ].filter(x => x.value > 0);
   const promoOptions = [...new Set((data?.orders || []).map(o => o.code).filter((x): x is string => Boolean(x)))].sort();
   const partnerRank = useMemo(() => {
     const map = new Map<string, { id: string; name: string; orders: number; delivered: number; returns: number; revenue: number }>();
     rows.forEach(o => {
       if (!o.partnerId) return;
-      const t = map.get(o.partnerId) || { id: o.partnerId, name: o.partner || 'Partenaire', orders: 0, delivered: 0, returns: 0, revenue: 0 };
+      const t = map.get(o.partnerId) || { id: o.partnerId, name: o.partner || 'Partner', orders: 0, delivered: 0, returns: 0, revenue: 0 };
       t.orders++; t.revenue += o.totalEGP || 0;
       if (o.status === 'DELIVERED') t.delivered++;
       if (o.status === 'REFUNDED') t.returns++;
@@ -193,100 +193,100 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
       <div>
         <p className="text-xs font-semibold uppercase tracking-[.16em] text-[#1F6B3A]">Herbal Vitaly Affiliate Hub</p>
         <h1 className="mt-1 text-2xl font-bold text-[#172D20]">
-          {admin ? 'Dashboard · Administration' : 'Dashboard · Partenaire'}
+          {admin ? 'Dashboard · Administration' : 'Dashboard · Partner'}
         </h1>
-        <p className="mt-1 text-sm text-slate-500">Commandes synchronisées, attribution, livraison et résultats réels.</p>
+        <p className="mt-1 text-sm text-slate-500">Synchronized orders, attribution, deliveries, and verified performance.</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm">
           <CalendarDays className="h-4 w-4 text-[#1F6B3A]"/>
-          <select aria-label="Période" value={days} onChange={e => setDays(Number(e.target.value))} className="bg-white outline-none">
-            <option value={7}>7 jours</option><option value={30}>30 jours</option><option value={90}>90 jours</option>
+          <select aria-label="Date range" value={days} onChange={e => setDays(Number(e.target.value))} className="bg-white outline-none">
+            <option value={7}>Last 7 days</option><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option>
           </select>
         </label>
-        <button type="button" onClick={exportCsv} disabled={!data} className="rounded-lg border bg-white px-3 py-2 text-sm font-medium text-[#1F6B3A] disabled:opacity-50">Exporter CSV</button>
+        <button type="button" onClick={exportCsv} disabled={!data} className="rounded-lg border bg-white px-3 py-2 text-sm font-medium text-[#1F6B3A] disabled:opacity-50">Export CSV</button>
         <button type="button" onClick={() => setRefresh(n => n + 1)} className="flex items-center gap-2 rounded-lg bg-[#1F6B3A] px-3 py-2 text-sm font-medium text-white">
-          <RefreshCw className="h-4 w-4"/> Actualiser
+          <RefreshCw className="h-4 w-4"/> Refresh
         </button>
       </div>
     </div>
     {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error}</div>}
-    {loading && <p role="status" className="rounded-xl border bg-white p-4 text-sm text-slate-500">Chargement des données vérifiées…</p>}
+    {loading && <p role="status" className="rounded-xl border bg-white p-4 text-sm text-slate-500">Loading verified dashboard data…</p>}
     {data && <>
-      {!data.complete && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Volume supérieur à 2 000 événements : les graphiques et tableaux correspondent uniquement aux données affichées.</p>}
+      {!data.complete && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">More than 2,000 events found: charts and tables cover only the records shown.</p>}
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 2xl:grid-cols-8">
-        <Metric title="Commandes suivies" value={String(data.totals.trackedOrders)} icon={ShoppingBag} note="Période sélectionnée"/>
-        <Metric title="Valeur des commandes" value={formatMoney(data.totals.orderValueEGP)} icon={Wallet} note="Non assimilée à l'encaissement"/>
-        <Metric title="Commandes livrées" value={String(data.totals.deliveredOrders)} icon={Truck}/>
-        <Metric title="Remboursées / annulées" value={String(data.totals.returnedOrders + data.totals.cancelledOrders)} icon={RotateCcw} accent="#D64B68"/>
-        <Metric title="Clics suivis" value={String(data.totals.clicks)} icon={Activity}/>
+        <Metric title="Tracked orders" value={String(data.totals.trackedOrders)} icon={ShoppingBag} note="Selected period"/>
+        <Metric title="Order value" value={formatMoney(data.totals.orderValueEGP)} icon={Wallet} note="Not the same as collected revenue"/>
+        <Metric title="Delivered orders" value={String(data.totals.deliveredOrders)} icon={Truck}/>
+        <Metric title="Refunded / cancelled" value={String(data.totals.returnedOrders + data.totals.cancelledOrders)} icon={RotateCcw} accent="#D64B68"/>
+        <Metric title="Tracked clicks" value={String(data.totals.clicks)} icon={Activity}/>
         <Metric title="Leads" value={String(data.totals.leads)} icon={Users}/>
-        <Metric title={admin ? 'Codes actifs Shopify' : 'Commissions en attente'} value={admin ? String(data.activeCoupons) : formatMoney(data.finance.pendingEGP)} icon={Ticket}/>
-        <Metric title="Commandes attribuées / clics" value={data.totals.clicks && data.complete ?
+        <Metric title={admin ? 'Active Shopify codes' : 'Pending commissions'} value={admin ? String(data.activeCoupons) : formatMoney(data.finance.pendingEGP)} icon={Ticket}/>
+        <Metric title="Attributed orders / clicks" value={data.totals.clicks && data.complete ?
           (100 * data.orders.filter(o => ['AFFILIATE_LINK', 'PROMO_CODE', 'LINK_AND_PROMO'].includes(o.source)).length / data.totals.clicks).toFixed(1) + '%' : '—'}
-          icon={BarChart3} note="Indicateur de suivi, pas un taux de conversion Shopify"/>
+          icon={BarChart3} note="Tracking indicator, not Shopify's confirmed conversion rate"/>
       </div>
 
-      <Panel title="Shopify · Herbal Vitaly" subtitle="Boutique officielle et catalogue produits — données Refferq indépendantes de la validation COD/Bosta.">
+      <Panel title="Shopify · Herbal Vitaly" subtitle="Official Shopify store and product catalog — Refferq figures are independent of COD/Bosta reconciliation.">
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-          <span className="text-slate-600">Dernière commande synchronisée : {data.orders[0] ? new Date(data.orders[0].date).toLocaleString('fr-FR') : 'aucune'}</span>
+          <span className="text-slate-600">Latest synchronized order: {data.orders[0] ? new Date(data.orders[0].date).toLocaleString('en-GB') : 'none'}</span>
           <div className="flex flex-wrap gap-2">
-            <a href="https://herbalvitaly.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 font-medium text-[#1F6B3A]"><ExternalLink className="h-4 w-4"/> Boutique Shopify</a>
-            <Link href={admin ? '/admin/coupons' : '/affiliate/coupons'} className="rounded-lg border px-3 py-2 font-medium text-[#1F6B3A]">{admin ? 'Coupons & produits' : 'Mes coupons & produits'}</Link>
-            {admin && <Link href="/admin/orders" className="rounded-lg bg-[#E9F4EC] px-3 py-2 font-medium text-[#1F6B3A]">Synchronisation des commandes</Link>}
+            <a href="https://herbalvitaly.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 font-medium text-[#1F6B3A]"><ExternalLink className="h-4 w-4"/> Shopify store</a>
+            <Link href={admin ? '/admin/coupons' : '/affiliate/coupons'} className="rounded-lg border px-3 py-2 font-medium text-[#1F6B3A]">{admin ? 'Coupons & products' : 'My coupons & products'}</Link>
+            {admin && <Link href="/admin/orders" className="rounded-lg bg-[#E9F4EC] px-3 py-2 font-medium text-[#1F6B3A]">Order synchronization</Link>}
           </div>
         </div>
       </Panel>
 
-      <Panel title="Filtres d'analyse" subtitle="Les KPI généraux correspondent à toute la période ; les graphiques et commandes ci-dessous respectent les filtres.">
+      <Panel title="Analysis filters" subtitle="Summary KPIs cover the selected period; charts and order rows below also reflect your filters.">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {admin && <label className="text-xs text-slate-500">Partenaire
+          {admin && <label className="text-xs text-slate-500">Partner
             <select className="mt-1 w-full rounded-lg border bg-white p-2.5 text-sm text-slate-800" value={partner} onChange={e => setPartner(e.target.value)}>
-              <option value="">Tous les partenaires</option>{data.partners.map(p => <option value={p.id} key={p.id}>{p.name} · {p.code}</option>)}
+              <option value="">All partners</option>{data.partners.map(p => <option value={p.id} key={p.id}>{p.name} · {p.code}</option>)}
             </select>
           </label>}
-          <label className="text-xs text-slate-500">Recherche commande / partenaire
-            <input className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={query} onChange={e => setQuery(e.target.value)} placeholder="#2064, T15, partenaire…" />
+          <label className="text-xs text-slate-500">Search orders / partners
+            <input className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={query} onChange={e => setQuery(e.target.value)} placeholder="#2064, T15, partner…" />
           </label>
-          <label className="text-xs text-slate-500">État livraison
+          <label className="text-xs text-slate-500">Delivery status
             <select className="mt-1 w-full rounded-lg border bg-white p-2.5 text-sm text-slate-800" value={delivery} onChange={e => setDelivery(e.target.value)}>
-              <option value="">Tous les statuts</option>
+              <option value="">All statuses</option>
               {['PENDING','DELIVERED','REFUNDED','CANCELLED'].map(k => <option key={k} value={k}>{statusNames[k]}</option>)}
             </select>
           </label>
-          <label className="text-xs text-slate-500">Source d'attribution
+          <label className="text-xs text-slate-500">Attribution source
             <select className="mt-1 w-full rounded-lg border bg-white p-2.5 text-sm text-slate-800" value={source} onChange={e => setSource(e.target.value)}>
-              <option value="">Toutes les sources</option>
+              <option value="">All sources</option>
               {['AFFILIATE_LINK','PROMO_CODE','LINK_AND_PROMO','UNATTRIBUTED','UNVERIFIED','CONFLICT'].map(k => <option key={k} value={k}>{statusNames[k]}</option>)}
             </select>
           </label>
-          <label className="text-xs text-slate-500">Code promo
+          <label className="text-xs text-slate-500">Discount code
             <select className="mt-1 w-full rounded-lg border bg-white p-2.5 text-sm text-slate-800" value={couponFilter} onChange={e => setCouponFilter(e.target.value)}>
-              <option value="">Tous les codes</option>
+              <option value="">All discount codes</option>
               {promoOptions.map(k => <option key={k} value={k}>{k}</option>)}
             </select>
           </label>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-          <span>{rows.length} commandes affichées · {formatMoney(totals.value)} · {totals.settled} rapprochements financiers marqués</span>
-          <button type="button" onClick={() => { setQuery(''); setDelivery(''); setSource(''); setCouponFilter(''); setPartner(''); }} className="inline-flex items-center gap-1 font-medium text-[#1F6B3A]"><FilterX className="h-3.5 w-3.5"/> Réinitialiser</button>
+          <span>{rows.length} orders displayed · {formatMoney(totals.value)} · {totals.settled} marked as financially reconciled</span>
+          <button type="button" onClick={() => { setQuery(''); setDelivery(''); setSource(''); setCouponFilter(''); setPartner(''); }} className="inline-flex items-center gap-1 font-medium text-[#1F6B3A]"><FilterX className="h-3.5 w-3.5"/> Reset filters</button>
         </div>
       </Panel>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Panel title="Évolution des commandes" subtitle="Valeur des commandes synchronisées (EGP) · par jour">
-          <div className="h-56" role="img" aria-label="Graphique quotidien de valeur des commandes">
+        <Panel title="Order trends" subtitle="Synchronized order value (EGP) · per day">
+          <div className="h-56" role="img" aria-label="Daily order value chart">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartDays}><CartesianGrid vertical={false} stroke="#E4EBE6"/>
                 <XAxis dataKey="label" tick={{fontSize:10}} minTickGap={25}/>
                 <YAxis tick={{fontSize:10}} width={45}/><Tooltip formatter={(v) => formatMoney(Number(v))}/>
-                <Area type="monotone" dataKey="value" stroke={green} fill="#E9F4EC" strokeWidth={2} name="Commandes" />
+                <Area type="monotone" dataKey="value" stroke={green} fill="#E9F4EC" strokeWidth={2} name="Orders" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </Panel>
-        <Panel id="delivery-status" title="Statuts de livraison" subtitle="Livrées, en attente, remboursées et annulées">
-          {statusChart.length ? <div className="h-56" role="img" aria-label="Répartition des statuts de livraison">
+        <Panel id="delivery-status" title="Delivery statuses" subtitle="Delivered, pending, refunded, and cancelled">
+          {statusChart.length ? <div className="h-56" role="img" aria-label="Delivery status breakdown">
             <ResponsiveContainer width="100%" height="100%"><PieChart>
               <Pie data={statusChart} dataKey="value" nameKey="name" innerRadius={55} outerRadius={76}>
                 {statusChart.map(c => <Cell key={c.name} fill={c.color}/>)}
@@ -295,13 +295,13 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
           </div> : <p className="py-14 text-center text-sm text-slate-500">{empty}</p>}
           <div className="flex flex-wrap gap-3 text-xs">{statusChart.map(s => <span key={s.name}><span style={{color:s.color}}>●</span> {s.name}: {s.value}</span>)}</div>
         </Panel>
-        <Panel title="Clics et commandes" subtitle="Clics réellement enregistrés et commandes attribuées">
-          <div className="h-56" role="img" aria-label="Graphique de clics et commandes par jour">
+        <Panel title="Clicks and orders" subtitle="Recorded clicks and attributed orders">
+          <div className="h-56" role="img" aria-label="Daily clicks and orders chart">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartDays}><CartesianGrid vertical={false} stroke="#E4EBE6"/>
                 <XAxis dataKey="label" tick={{fontSize:10}} minTickGap={25}/><YAxis allowDecimals={false} tick={{fontSize:10}} width={25}/>
-                <Tooltip/><Bar name="Clics" dataKey="clicks" fill="#A2D0B0" radius={[3,3,0,0]}/>
-                <Bar name="Commandes" dataKey="orders" fill={green} radius={[3,3,0,0]}/>
+                <Tooltip/><Bar name="Clicks" dataKey="clicks" fill="#A2D0B0" radius={[3,3,0,0]}/>
+                <Bar name="Orders" dataKey="orders" fill={green} radius={[3,3,0,0]}/>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -349,7 +349,7 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
           </select></label>}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[#F6FAF7] text-xs text-slate-500"><tr><th className="px-3 py-3">Produit</th><th className="px-3 py-3">Page Shopify</th><th className="px-3 py-3">{admin ? 'Catalogue' : 'Code promo'}</th>{!admin && <th className="px-3 py-3">Lien affilié</th>}</tr></thead>
+            <thead className="bg-[#F6FAF7] text-xs text-slate-500"><tr><th className="px-3 py-3">Produit</th><th className="px-3 py-3">Page Shopify</th><th className="px-3 py-3">{admin ? 'Catalogue' : 'Discount code'}</th>{!admin && <th className="px-3 py-3">Lien affilié</th>}</tr></thead>
             <tbody className="divide-y divide-[#E4EBE6]">
               {admin ? products.map(p => <tr key={p.id}><td className="px-3 py-3 font-medium">{p.title}</td>
                 <td className="px-3 py-3"><a className="inline-flex items-center gap-1 text-[#1F6B3A] underline" href={p.onlineStoreUrl!} target="_blank" rel="noopener noreferrer">Voir produit <ExternalLink className="h-3.5 w-3.5"/></a></td>
@@ -377,7 +377,7 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
               {rows.slice(0, 60).map(o => <tr key={o.id} className="hover:bg-[#FBFDFB]">
                 <td className="p-3 font-semibold">{o.shopifyOrderUrl ?
                   <a href={o.shopifyOrderUrl} target="_blank" rel="noopener noreferrer" className="text-[#1F6B3A] underline">#{o.name}</a> : '#'+o.name}</td>
-                <td className="whitespace-nowrap p-3 text-xs text-slate-600">{new Date(o.date).toLocaleDateString('fr-FR')}</td>
+                <td className="whitespace-nowrap p-3 text-xs text-slate-600">{new Date(o.date).toLocaleDateString('en-GB')}</td>
                 {admin && <td className="p-3 text-xs">{o.partner || '—'}</td>}
                 <td className="p-3 font-mono text-xs">{o.code || '—'}</td>
                 <td className="p-3 text-xs">{statusNames[o.source] || o.source}</td>
