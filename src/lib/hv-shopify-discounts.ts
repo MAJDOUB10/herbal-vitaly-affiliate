@@ -157,3 +157,98 @@ export async function createShopifyDiscount(input: Record<string, unknown>): Pro
     summary: out.codeDiscountNode.codeDiscount.summary,
   };
 }
+
+/** Verified product targets for Shopify discount codes, including legacy
+ * synced codes whose Refferq product arrays were never populated.
+ * Read-only: never changes discounts or coupon assignments.
+ */
+export type ShopifyCouponTarget = {
+  status: string;
+  scope: 'PRODUCTS' | 'ALL' | 'COLLECTIONS' | 'MISSING' | 'UNSUPPORTED';
+  products: Array<{ id: string; title: string; handle: string; url: string }>;
+  collections: Array<{ title: string; handle: string }>;
+  truncated: boolean;
+};
+type DiscountReply = {
+  id: string;
+  codeDiscount: {
+    status?: string;
+    customerGets?: {
+      items?: {
+        __typename: string;
+        products?: {
+          nodes: Array<{ id: string; handle: string; title: string; onlineStoreUrl: string | null }>;
+          pageInfo: { hasNextPage: boolean };
+        };
+        collections?: {
+          nodes: Array<{ title: string; handle: string }>;
+          pageInfo: { hasNextPage: boolean };
+        };
+      };
+    };
+  };
+};
+const MISSING_TARGET: ShopifyCouponTarget = {
+  status: 'NOT_FOUND', scope: 'MISSING', products: [], collections: [], truncated: false,
+};
+
+export async function getShopifyCouponTargets(codes: string[]): Promise<Record<string, ShopifyCouponTarget>> {
+  const safeCodes = [...new Set(codes.map(validateDiscountCode).filter((x): x is string => Boolean(x)))].slice(0, 100);
+  const result: Record<string, ShopifyCouponTarget> = {};
+  for (let start = 0; start < safeCodes.length; start += 5) {
+    const batch = safeCodes.slice(start, start + 5);
+    const variables: Record<string, unknown> = {};
+    const definitions: string[] = [];
+    const clauses = batch.map((code, i) => {
+      variables['code' + i] = code;
+      definitions.push('$code' + i + ': String!');
+      return ` c${i}: codeDiscountNodeByCode(code: $code${i}) {
+        id codeDiscount {
+          ... on DiscountCodeBasic {
+            status customerGets { items {
+              __typename
+              ... on DiscountProducts {
+                products(first: 40) {
+                  nodes { id title handle onlineStoreUrl }
+                  pageInfo { hasNextPage }
+                }
+              }
+              ... on DiscountCollections {
+                collections(first: 40) {
+                  nodes { title handle }
+                  pageInfo { hasNextPage }
+                }
+              }
+            } }
+          }
+        }
+      }`;
+    });
+    const query = 'query HvCouponProductTargets(' + definitions.join(', ') + ') { ' + clauses.join('\n') + ' }';
+    const response = await shopifyAdminGraphQL<Record<string, DiscountReply | null>>(query, variables);
+    for (let i = 0; i < batch.length; i++) {
+      const node = response['c' + i];
+      if (!node) { result[batch[i]] = { ...MISSING_TARGET }; continue; }
+      const discount = node.codeDiscount;
+      const items = discount?.customerGets?.items;
+      const kind = items?.__typename;
+      const scope: ShopifyCouponTarget['scope'] =
+        kind === 'DiscountProducts' ? 'PRODUCTS' :
+        kind === 'AllDiscountItems' ? 'ALL' :
+        kind === 'DiscountCollections' ? 'COLLECTIONS' : 'UNSUPPORTED';
+      result[batch[i]] = {
+        status: discount?.status || 'UNKNOWN',
+        scope,
+        products: scope === 'PRODUCTS'
+          ? (items?.products?.nodes || [])
+              .filter(p => p.onlineStoreUrl?.startsWith('https://herbalvitaly.com/products/'))
+              .map(p => ({ id: p.id, title: p.title, handle: p.handle, url: p.onlineStoreUrl! }))
+          : [],
+        collections: scope === 'COLLECTIONS' ? (items?.collections?.nodes || []) : [],
+        truncated: Boolean(items?.products?.pageInfo?.hasNextPage ||
+                           items?.collections?.pageInfo?.hasNextPage),
+      };
+    }
+  }
+  return result;
+}
