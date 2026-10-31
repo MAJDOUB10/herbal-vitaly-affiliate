@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { AreaChart, Area, BarChart, Bar, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Activity, ArrowUpRight, BarChart3, CalendarDays, CheckCircle2, ClipboardCopy, ExternalLink, FilterX, Link2, Package, RefreshCw, RotateCcw, ShoppingBag, Ticket, Truck, Users, Wallet } from 'lucide-react';
@@ -58,7 +59,7 @@ function Metric({ title, value, note, icon: Icon, accent = green }: {
   </div>;
 }
 function Panel({ title, subtitle, children }: {
-  title: string; subtitle?: string; children: React.ReactNode;
+  title: string; subtitle?: string; children: ReactNode;
 }) {
   return <section className="min-w-0 rounded-2xl border border-[#E4EBE6] bg-white p-4 shadow-sm">
     <h2 className="font-semibold text-[#173621]">{title}</h2>
@@ -276,7 +277,7 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartDays}><CartesianGrid vertical={false} stroke="#E4EBE6"/>
                 <XAxis dataKey="label" tick={{fontSize:10}} minTickGap={25}/>
-                <YAxis tick={{fontSize:10}} width={45}/><Tooltip formatter={(v: number) => formatMoney(Number(v))}/>
+                <YAxis tick={{fontSize:10}} width={45}/><Tooltip formatter={(v) => formatMoney(Number(v))}/>
                 <Area type="monotone" dataKey="value" stroke={green} fill="#E9F4EC" strokeWidth={2} name="Commandes" />
               </AreaChart>
             </ResponsiveContainer>
@@ -342,7 +343,7 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
         {!admin && <label className="mb-3 block text-xs text-slate-500">Filtrer les liens par produit
           <select className="mt-1 w-full rounded-lg border bg-white p-2 text-sm sm:w-72" value={productFilter} onChange={e=>setProductFilter(e.target.value)}>
             <option value="">Tous les produits</option>
-            {[...new Map(coupons.flatMap(c=>c.products).map(p=>[p.handle,p.title])).entries()].map(([handle,title])=><option key={handle} value={handle}>{title}</option>)}
+            {[...new Map(coupons.flatMap(c=>c.products).map(p=>[p.handle,p.title] as const)).entries()].map(([handle,title])=><option key={handle} value={handle}>{title}</option>)}
           </select></label>}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
