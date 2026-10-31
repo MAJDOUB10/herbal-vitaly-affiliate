@@ -52,12 +52,14 @@ import {
   FolderOpen,
   FileText,
   UsersRound,
+  Clapperboard,
   Layers,
 } from 'lucide-react';
 
 const mainNavItems = [
   { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
   { title: 'Partners', url: '/admin/partners', icon: Users },
+  { title: 'Partner CRM / UGC', url: '/admin/ugc-crm', icon: Clapperboard },
   { title: 'Customers', url: '/admin/customers', icon: UserCheck },
   { title: 'Orders', url: '/admin/orders', icon: ShoppingBag },
   { title: 'Products Shopify', url: '/admin#shopify-products', icon: Package },
