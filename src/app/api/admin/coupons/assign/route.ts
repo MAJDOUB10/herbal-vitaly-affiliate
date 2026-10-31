@@ -6,8 +6,13 @@ import { prisma } from '@/lib/prisma';
  * No Shopify discount mutation, checkout price change or financial write.
  */
 export async function POST(request: NextRequest) {
-  if (process.env.VERCEL_ENV !== 'preview')
-    return NextResponse.json({ error: 'STAGING only until validation' }, { status: 423 });
+  const production = process.env.VERCEL_ENV === 'production';
+  if (production && process.env.HV_ENABLE_SHOPIFY_DISCOUNT_WRITES !== 'true')
+    return NextResponse.json({ error: 'Coupon partner assignment disabled in Production' }, { status: 423 });
+  if (process.env.VERCEL_ENV !== 'preview' && !production)
+    return NextResponse.json({ error: 'Unsupported environment' }, { status: 423 });
+  if (production && request.headers.get('origin') !== 'https://partner.herbalvitaly.com')
+    return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
   const actorId = request.headers.get('x-user-id');
   if (!actorId || request.headers.get('x-authenticated-role') !== 'ADMIN')
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
