@@ -32,13 +32,14 @@ test('Order #2063 snapshot can be normalized as unpaid COD without delivery appr
 
 test('Production order receiver validates HMAC, target shop, dedupe and never writes payouts', () => {
  const w = read('src/app/api/integrations/shopify/orders/route.ts');
+ const ingest = read('src/lib/hv-order-ingest.ts');
  assert.match(w, /\['preview', 'production'\]/);
  assert.match(w, /SHOPIFY_CLIENT_SECRET/);
  assert.match(w, /verifyShopifyHmac\(raw, signature, secret\)/);
  assert.match(w, /sourceShop !== shopDomain/);
  assert.match(w, /'shopify:' \+ deliveryId/);
- assert.match(w, /existing\.shopifyUpdatedAt >= order\.shopifyUpdatedAt/);
- assert.match(w, /merchantReconciled: Boolean\(existing\?\.merchantReconciled\)/);
+ assert.match(ingest, /existing\.shopifyUpdatedAt >= order\.shopifyUpdatedAt/);
+ assert.match(ingest, /merchantReconciled: Boolean\(existing\?\.merchantReconciled\)/);
  assert.doesNotMatch(w, /payout\.create|commission\.create|isPaid = true/);
 });
 
@@ -52,4 +53,8 @@ test('only authenticated admin can install subscriptions for the official domain
  assert.match(route, /webhookSubscriptionCreate/);
  assert.match(route, /partner\.herbalvitaly\.com\/api\/integrations\/shopify\/orders/);
  assert.match(page, /Activate Shopify order webhooks/);
+ assert.match(page, /Recover recent Shopify orders/);
+ const recovery = read('src/app/api/admin/shopify/backfill-orders/route.ts');
+ assert.match(recovery, /ingestShopifyOrderSnapshot/);
+ assert.match(recovery, /financialValidation: 'NOT_PERFORMED'/);
 });
