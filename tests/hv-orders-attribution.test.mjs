@@ -56,10 +56,11 @@ test('API routes restrict partner data and never mutate orders or approve payout
   const admin = read('src/app/api/admin/orders/route.ts');
   const affiliate = read('src/app/api/affiliate/shopify-orders/route.ts');
   const webhook = read('src/app/api/integrations/shopify/orders/route.ts');
+  const ingest = read('src/lib/hv-order-ingest.ts');
   assert.match(admin, /x-authenticated-role.*ADMIN/);
   assert.match(affiliate, /x-authenticated-role.*AFFILIATE/);
   assert.match(affiliate, /where = \{ affiliateId,/);
   assert.match(webhook, /verifyShopifyHmac\(raw, signature, secret\)/);
-  assert.match(webhook, /resolveOrderAttribution/);
+  assert.match(ingest, /resolveOrderAttribution/);
   assert.doesNotMatch(webhook, /commission\.create|payout\.create/);
 });
