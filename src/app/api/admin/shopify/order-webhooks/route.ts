@@ -7,7 +7,11 @@ import { shopifyAdminGraphQL } from '@/lib/hv-shopify-discounts';
  * Uses the SAME Shopify Dev Dashboard app credentials as the receiver's HMAC.
  * Never registers the wrong Shopify connector app's subscriptions.
  */
-const ENDPOINT = 'https://partner.herbalvitaly.com/api/integrations/shopify/orders';
+// Shopify rejects endpoints on any domain attached to the store, including
+// partner.herbalvitaly.com. This stable Production Vercel alias is independent
+// of the Shopify storefront yet resolves to the same secured receiver.
+// Keep the portal UI on partner.herbalvitaly.com; webhook delivery uses this URL.
+const ENDPOINT = 'https://herbal-vitaly-affiliate.vercel.app/api/integrations/shopify/orders';
 const TOPICS = ['ORDERS_CREATE', 'ORDERS_UPDATED', 'ORDERS_CANCELLED'] as const;
 type Subscription = { id: string; topic: string; uri: string };
 type Registry = {
