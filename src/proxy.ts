@@ -62,6 +62,9 @@ export const config = {
     '/affiliate/:path*',
     '/api/admin/:path*',
     '/api/affiliate/:path*',
+    // Shared admin/affiliate analytics endpoint needs the same signed-cookie
+    // authentication and trusted identity headers as the private role APIs.
+    '/api/dashboard/:path*',
     '/api/auth/me',
   ],
 };
