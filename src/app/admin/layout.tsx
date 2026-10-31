@@ -33,6 +33,8 @@ import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard,
   ShoppingBag,
+  Package,
+  RotateCcw,
   Users,
   UserCheck,
   Wallet,
@@ -58,6 +60,8 @@ const mainNavItems = [
   { title: 'Partners', url: '/admin/partners', icon: Users },
   { title: 'Customers', url: '/admin/customers', icon: UserCheck },
   { title: 'Orders', url: '/admin/orders', icon: ShoppingBag },
+  { title: 'Products Shopify', url: '/admin#shopify-products', icon: Package },
+  { title: 'Returns analysis', url: '/admin#return-reasons', icon: RotateCcw },
   { title: 'Payouts', url: '/admin/payouts', icon: Wallet },
   { title: 'COD Reconciliation', url: '/admin/cod', icon: Truck },
   { title: 'Invoices', url: '/admin/invoices', icon: FileText },
