@@ -38,8 +38,13 @@ export async function POST(request: NextRequest) {
   const user = await verifyAdmin(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   // All discount writes are staged until the storefront and finance flow pass QA.
-  if (process.env.VERCEL_ENV !== 'preview')
-    return NextResponse.json({ error: 'Shopify coupon creation is restricted to vetted Preview deployments' }, { status: 423 });
+  const production = process.env.VERCEL_ENV === 'production';
+  if (production && process.env.HV_ENABLE_SHOPIFY_DISCOUNT_WRITES !== 'true')
+    return NextResponse.json({ error: 'Shopify coupon creation is not yet enabled in Production' }, { status: 423 });
+  if (process.env.VERCEL_ENV !== 'preview' && !production)
+    return NextResponse.json({ error: 'Coupon writes require a verified Vercel environment' }, { status: 423 });
+  if (production && request.headers.get('origin') !== 'https://partner.herbalvitaly.com')
+    return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
   let reservedId: string | null = null;
   let shopifyCreated = false;
   try {
