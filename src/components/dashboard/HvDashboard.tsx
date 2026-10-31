@@ -222,7 +222,9 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
         <Metric title="Clics suivis" value={String(data.totals.clicks)} icon={Activity}/>
         <Metric title="Leads" value={String(data.totals.leads)} icon={Users}/>
         <Metric title={admin ? 'Codes actifs Shopify' : 'Commissions en attente'} value={admin ? String(data.activeCoupons) : formatMoney(data.finance.pendingEGP)} icon={Ticket}/>
-        <Metric title="Taux commandes / clics" value={data.totals.clicks ? (100 * data.totals.trackedOrders / data.totals.clicks).toFixed(1) + '%' : '—'} icon={BarChart3} note="Indicateur, non taux de vente confirmé"/>
+        <Metric title="Commandes attribuées / clics" value={data.totals.clicks && data.complete ?
+          (100 * data.orders.filter(o => ['AFFILIATE_LINK', 'PROMO_CODE', 'LINK_AND_PROMO'].includes(o.source)).length / data.totals.clicks).toFixed(1) + '%' : '—'}
+          icon={BarChart3} note="Indicateur de suivi, pas un taux de conversion Shopify"/>
       </div>
 
       <Panel title="Shopify · Herbal Vitaly" subtitle="Boutique officielle et catalogue produits — données Refferq indépendantes de la validation COD/Bosta.">
