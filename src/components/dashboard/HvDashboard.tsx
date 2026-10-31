@@ -193,7 +193,7 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
       <div>
         <p className="text-xs font-semibold uppercase tracking-[.16em] text-[#1F6B3A]">Herbal Vitaly Affiliate Hub</p>
         <h1 className="mt-1 text-2xl font-bold text-[#172D20]">
-          {admin ? 'Dashboard · Administration' : 'Dashboard · Partner'}
+          {admin ? 'Admin Dashboard' : 'Partner Dashboard'}
         </h1>
         <p className="mt-1 text-sm text-slate-500">Synchronized orders, attribution, deliveries, and verified performance.</p>
       </div>
