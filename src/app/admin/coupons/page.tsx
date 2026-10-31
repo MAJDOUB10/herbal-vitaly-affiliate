@@ -227,7 +227,7 @@ export default function CouponsPage() {
   };
 
   const liveProductOptions = [...new Map(coupons.flatMap(c =>
-    c.eligibleProducts || []).map(p => [p.handle, p.title])).entries()];
+    c.eligibleProducts || []).map(p => [p.handle, p.title] as const)).entries()];
   const visibleCoupons = coupons.filter(c => {
     if (filterProduct === 'all') return true;
     if (filterProduct === 'unverified') return c.shopifyVerification !== 'VERIFIED';
