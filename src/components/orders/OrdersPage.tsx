@@ -65,6 +65,7 @@ export default function OrdersPage({ admin = false }: { admin?: boolean }) {
   const [refresh, setRefresh] = useState(0);
   const [syncStatus, setSyncStatus] = useState<WebhookStatus | null>(null);
   const [syncLoading, setSyncLoading] = useState(false);
+  const [recovering, setRecovering] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
 
   const fetchOrders = useCallback(() => {
@@ -121,6 +122,25 @@ export default function OrdersPage({ admin = false }: { admin?: boolean }) {
     }
   };
 
+  const backfillRecentOrders = async () => {
+    if (!window.confirm('Recover up to 50 recently updated Shopify orders? This does not mark any order paid or delivered.')) return;
+    setRecovering(true);
+    setSyncMessage('');
+    try {
+      const res = await fetch('/api/admin/shopify/backfill-orders', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: 2 }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Some Shopify orders could not be synchronized');
+      setSyncMessage(`Scanned ${data.scanned}; imported/updated ${data.importedOrUpdated}; unchanged ${data.unchanged}.` +
+        (data.moreAvailable ? ' Additional pages exist in Shopify; this is a partial recovery.' : ''));
+      setRefresh(v => v + 1);
+    } catch (err) {
+      setSyncMessage(err instanceof Error ? err.message : 'Shopify recovery failed');
+    } finally { setRecovering(false); }
+  };
+
   const pageTotal = useMemo(() =>
     rows.reduce((sum, o) => sum + Number(o.totalEGP || 0), 0), [rows]);
   const maxPage = Math.max(1, Math.ceil(total / perPage));
@@ -175,6 +195,11 @@ export default function OrdersPage({ admin = false }: { admin?: boolean }) {
             <button type="button" onClick={activateWebhooks} disabled={syncLoading}
               className="rounded-lg bg-[#1F6B3A] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">
               {syncLoading ? 'Connecting…' : 'Activate Shopify order webhooks'}
+            </button>}
+          {syncStatus?.success && syncStatus.hasOrderAccess &&
+            <button type="button" onClick={backfillRecentOrders} disabled={recovering}
+              className="rounded-lg border border-[#1F6B3A] px-4 py-2 text-xs font-semibold text-[#1F6B3A] disabled:opacity-50">
+              {recovering ? 'Reconciling…' : 'Recover recent Shopify orders'}
             </button>}
           {syncMessage && <p role="status" className="text-sm text-amber-800">{syncMessage}</p>}
         </section>
