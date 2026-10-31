@@ -11,11 +11,12 @@ const ENDPOINT = 'https://partner.herbalvitaly.com/api/integrations/shopify/orde
 const TOPICS = ['ORDERS_CREATE', 'ORDERS_UPDATED', 'ORDERS_CANCELLED'] as const;
 type Subscription = { id: string; topic: string; uri: string };
 type Registry = {
-  currentAppInstallation: { accessScopes: Array<{ handle: string }> };
   webhookSubscriptions: { nodes: Subscription[]; pageInfo: { hasNextPage: boolean } };
 };
-const LIST = `query HvOrderWebhookStatus {
+const SCOPES = `query HvInstalledAppScopes {
   currentAppInstallation { accessScopes { handle } }
+}`;
+const LIST = `query HvOrderWebhookStatus {
   webhookSubscriptions(first: 100, topics: [ORDERS_CREATE, ORDERS_UPDATED, ORDERS_CANCELLED]) {
     nodes { id topic uri }
     pageInfo { hasNextPage }
@@ -36,11 +37,21 @@ async function isAdmin(request: NextRequest): Promise<boolean> {
   return admin?.role === 'ADMIN' && admin.status === 'ACTIVE';
 }
 async function registry() {
+  const app = await shopifyAdminGraphQL<{
+    currentAppInstallation: { accessScopes: Array<{ handle: string }> };
+  }>(SCOPES);
+  const scopes = app.currentAppInstallation.accessScopes.map(x => x.handle);
+  const hasOrderAccess = scopes.includes('read_orders') || scopes.includes('write_orders');
+  if (!hasOrderAccess) {
+    return {
+      scopes, hasOrderAccess, subscriptions: [] as Subscription[], paginated: false,
+      matching: TOPICS.map(topic => ({ topic, installed: false })),
+    };
+  }
   const data = await shopifyAdminGraphQL<Registry>(LIST);
-  const scopes = data.currentAppInstallation.accessScopes.map(x => x.handle);
   return {
     scopes,
-    hasOrderAccess: scopes.includes('read_orders') || scopes.includes('write_orders'),
+    hasOrderAccess,
     subscriptions: data.webhookSubscriptions.nodes,
     paginated: data.webhookSubscriptions.pageInfo.hasNextPage,
     matching: TOPICS.map(topic => ({
