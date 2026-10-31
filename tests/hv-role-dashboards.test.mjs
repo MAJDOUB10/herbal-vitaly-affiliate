@@ -41,3 +41,19 @@ test('admin and affiliate dashboards share UI but cannot impersonate each other'
  assert.match(ui, /\/api\/admin\/coupons\/products/);
  assert.match(ui, /o\.shopifyOrderUrl \?/);
 });
+
+test('shared dashboard endpoint is covered by the same signed HttpOnly session boundary', () => {
+ const proxy = source('src/proxy.ts');
+ const api = source('src/app/api/dashboard/insights/route.ts');
+ assert.match(proxy, /'\/api\/dashboard\/:path\*'/);
+ assert.match(proxy, /request\.cookies\.get\('auth-token'\)/);
+ assert.match(proxy, /jwtVerify\(/);
+ assert.match(proxy, /passwordSessionVersion\(user\.password\)/);
+ assert.match(proxy, /headers\.delete\('x-user-id'\)/);
+ assert.match(proxy, /headers\.delete\('x-authenticated-role'\)/);
+ assert.match(proxy, /headers\.set\('x-user-id', user\.id\)/);
+ assert.match(proxy, /headers\.set\('x-authenticated-role', user\.role\)/);
+ assert.match(api, /user\.role !== headerRole/);
+ assert.match(api, /user\.status !== 'ACTIVE'/);
+ assert.match(api, /affiliateId: user\.affiliate!\.id/);
+});
