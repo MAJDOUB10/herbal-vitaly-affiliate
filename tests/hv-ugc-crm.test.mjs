@@ -45,7 +45,7 @@ test('UGC dashboard supports contact management, content status, sample deliveri
  assert.match(page,/Export CSV/);
  assert.match(page,/Add creator/);
  assert.match(page,/Save record/);
- assert.match(page,/CRM contact/);
+ assert.match(page,/Creator \/ Partner record/);
  assert.match(page,/https:\/\/wa\.me\//);
  assert.match(page,/csvSafe/);
  assert.match(page,/^[\s]*\[=\+@-\]/m);
