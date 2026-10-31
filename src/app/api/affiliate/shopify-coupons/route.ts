@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { validateDiscountCode } from '@/lib/hv-shopify-discounts';
+import { validateDiscountCode, getShopifyCouponTargets, getShopifyProducts } from '@/lib/hv-shopify-discounts';
 
 /** Read-only approved partner discounts, scoped to the authenticated account. */
 export async function GET(request: NextRequest) {
@@ -21,20 +21,36 @@ export async function GET(request: NextRequest) {
       shopifyProductHandles: true, shopifyProductIds: true },
     orderBy: { createdAt: 'desc' }, take: 100,
   });
-  const valid = coupons.filter(c => validateDiscountCode(c.code) &&
-    c.shopifyProductHandles.length === c.shopifyProductIds.length);
-  return NextResponse.json({
-    success: true,
-    coupons: valid.map(c => ({
-      ...c,
-      products: c.shopifyProductHandles.map(handle => ({
-        handle,
-        productUrl: 'https://herbalvitaly.com/products/' + encodeURIComponent(handle),
-        affiliateLink: 'https://partner.herbalvitaly.com/r/' +
-          encodeURIComponent(user.affiliate!.referralCode) +
-          '?dest=' + encodeURIComponent('https://herbalvitaly.com/products/' + encodeURIComponent(handle)) +
-          '&promo=' + encodeURIComponent(c.code),
-      })),
-    })),
-  }, { headers: { 'Cache-Control': 'private, no-store' } });
+  // Shopify is the live authority. Historical synced codes often have no
+  // Refferq product handles; never assume empty arrays mean entire store.
+  try {
+    const targets = await getShopifyCouponTargets(coupons.map(c => c.code));
+    const hasAll = coupons.some(c => targets[c.code.toUpperCase()]?.scope === 'ALL');
+    const allProducts = hasAll ? await getShopifyProducts() : [];
+    const eligible = coupons.flatMap(c => {
+      const target = targets[c.code.toUpperCase()];
+      if (!validateDiscountCode(c.code) || !target || target.status !== 'ACTIVE') return [];
+      const productList = target.scope === 'PRODUCTS' ? target.products :
+        target.scope === 'ALL'
+          ? allProducts.map(p => ({ id: p.id, title: p.title, handle: p.handle,
+              url: p.onlineStoreUrl! }))
+          : [];
+      return [{
+        id: c.id, code: c.code, discountType: c.discountType,
+        discountValue: c.discountValue, scope: target.scope,
+        products: productList.map(p => ({
+          handle: p.handle, title: p.title, productUrl: p.url,
+          affiliateLink: 'https://partner.herbalvitaly.com/r/' +
+            encodeURIComponent(user.affiliate!.referralCode) +
+            '?dest=' + encodeURIComponent(p.url) +
+            '&promo=' + encodeURIComponent(c.code),
+        })),
+      }];
+    });
+    return NextResponse.json({ success: true, coupons: eligible },
+      { headers: { 'Cache-Control': 'private, no-store' } });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Shopify eligibility verification currently unavailable' },
+      { status: 503, headers: { 'Cache-Control': 'private, no-store' } });
+  }
 }

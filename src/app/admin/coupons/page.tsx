@@ -20,7 +20,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Ticket, Plus, Pencil, Trash2, Copy, Check,
+  Ticket, Plus, Pencil, Trash2, Copy, Check, ExternalLink, Link2,
 } from 'lucide-react';
 
 interface Coupon {
@@ -36,6 +36,12 @@ interface Coupon {
   shopifyProductIds?: string[];
   shopifyProductHandles?: string[];
   shopifyStatus?: string;
+  shopifyLiveStatus?: string | null;
+  shopifyVerification?: 'VERIFIED' | 'LOCAL_ONLY' | 'UNAVAILABLE' | 'NOT_FOUND';
+  shopifyProductScope?: 'PRODUCTS' | 'ALL' | 'COLLECTIONS' | 'UNSUPPORTED' | 'MISSING' | null;
+  eligibleProducts?: Array<{ id: string; title: string; handle: string; url: string }>;
+  eligibleCollections?: Array<{ title: string; handle: string }>;
+  productListTruncated?: boolean;
   isActive: boolean;
   startsAt?: string;
   expiresAt?: string;
@@ -50,6 +56,8 @@ export default function CouponsPage() {
   const [partners, setPartners] = useState<PartnerChoice[]>([]);
   const [products, setProducts] = useState<ProductChoice[]>([]);
   const [catalogError, setCatalogError] = useState('');
+  const [shopifyVerificationError, setShopifyVerificationError] = useState(false);
+  const [filterProduct, setFilterProduct] = useState('all');
   const [formError, setFormError] = useState('');
   const [mappingCouponId, setMappingCouponId] = useState<string | null>(null);
   const [mappingError, setMappingError] = useState('');
@@ -79,7 +87,10 @@ export default function CouponsPage() {
     try {
       const res = await fetch('/api/admin/coupons');
       const data = await res.json();
-      if (data.success) setCoupons(data.coupons || []);
+      if (data.success) {
+        setCoupons(data.coupons || []);
+        setShopifyVerificationError(Boolean(data.shopifyVerificationError));
+      }
     } catch (error) {
       console.error('Failed to fetch coupons:', error);
     } finally {
@@ -215,6 +226,15 @@ export default function CouponsPage() {
     totalUses: coupons.reduce((s, c) => s + c.usedCount, 0),
   };
 
+  const liveProductOptions = [...new Map(coupons.flatMap(c =>
+    c.eligibleProducts || []).map(p => [p.handle, p.title] as const)).entries()];
+  const visibleCoupons = coupons.filter(c => {
+    if (filterProduct === 'all') return true;
+    if (filterProduct === 'unverified') return c.shopifyVerification !== 'VERIFIED';
+    if (filterProduct === 'all-products') return c.shopifyProductScope === 'ALL';
+    return c.eligibleProducts?.some(p => p.handle === filterProduct) || false;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -258,9 +278,25 @@ export default function CouponsPage() {
       <Card>
         <CardHeader>
           <CardTitle>All Coupons</CardTitle>
-          <CardDescription>Discount codes for customers referred by affiliates</CardDescription>
+          <CardDescription>Verified Shopify codes, eligible product pages and sharing links</CardDescription>
         </CardHeader>
         <CardContent>
+          {shopifyVerificationError && <p role="alert" className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Live Shopify validation is currently unavailable. Product links cannot be verified; Refferq's old product fields may be incomplete.
+          </p>}
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <label htmlFor="coupon-product-filter" className="text-sm font-medium">Filter by Shopify product</label>
+            <select id="coupon-product-filter" className="min-w-48 rounded-md border border-[#E4EBE6] bg-white p-2 text-sm"
+              value={filterProduct} onChange={e => setFilterProduct(e.target.value)}>
+              <option value="all">All codes ({coupons.length})</option>
+              {liveProductOptions.map(([handle, title]) => (
+                <option key={handle} value={handle}>{title}</option>
+              ))}
+              <option value="all-products">Entire store</option>
+              <option value="unverified">Not verified / Refferq only</option>
+            </select>
+            <span className="text-xs text-muted-foreground">{visibleCoupons.length} displayed</span>
+          </div>
           {coupons.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Ticket className="h-12 w-12 text-muted-foreground/50" />
@@ -282,7 +318,7 @@ export default function CouponsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {coupons.map(c => (
+                {visibleCoupons.map(c => (
                   <TableRow key={c.id}>
                     <TableCell>
                       <div className="flex items-center gap-1.5">
@@ -316,22 +352,52 @@ export default function CouponsPage() {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs">
-                      {c.shopifyProductHandles?.length
-                        ? c.shopifyProductHandles.map(handle => (
-                          <div key={handle} className="mb-1">
-                            <a className="text-primary underline" target="_blank" rel="noopener noreferrer"
-                              href={'https://herbalvitaly.com/products/' + encodeURIComponent(handle)}>
-                              {products.find(p => p.handle === handle)?.title || handle}
-                            </a>
+                    <TableCell className="min-w-[240px] text-xs">
+                      {c.shopifyVerification === 'VERIFIED' && c.shopifyProductScope === 'PRODUCTS'
+                        ? <div className="space-y-2">
+                            {c.eligibleProducts?.map(p => (
+                              <div key={p.id} className="flex flex-wrap items-center gap-2">
+                                <a className="inline-flex items-center gap-1 font-medium text-primary underline"
+                                   target="_blank" rel="noopener noreferrer" href={p.url}>
+                                  {p.title} <ExternalLink className="h-3 w-3" />
+                                </a>
+                                {c.shopifyLiveStatus === 'ACTIVE' && (
+                                  <Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs"
+                                    title={'Copy Shopify product promo link for ' + c.code}
+                                    onClick={() => copyCode(
+                                      'https://herbalvitaly.com/discount/' + encodeURIComponent(c.code) +
+                                      '?redirect=' + encodeURIComponent('/products/' + p.handle)
+                                    )}>
+                                    <Link2 className="h-3 w-3" /> Copy promo link
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                            {c.productListTruncated && <span className="text-amber-700">Additional eligible products exist in Shopify.</span>}
                           </div>
-                        ))
-                        : <span className="text-muted-foreground">All / legacy</span>}
+                        : c.shopifyVerification === 'VERIFIED' && c.shopifyProductScope === 'ALL'
+                          ? <a className="font-medium text-primary underline" href="https://herbalvitaly.com/"
+                              target="_blank" rel="noopener noreferrer">Entire Shopify store</a>
+                          : c.shopifyVerification === 'VERIFIED' && c.shopifyProductScope === 'COLLECTIONS'
+                            ? <div className="space-y-1">{c.eligibleCollections?.map(p => (
+                                <a key={p.handle} className="block text-primary underline"
+                                  href={'https://herbalvitaly.com/collections/' + encodeURIComponent(p.handle)}
+                                  target="_blank" rel="noopener noreferrer">{p.title} (collection)</a>
+                              ))}</div>
+                            : <span className="text-muted-foreground">
+                                {c.shopifyVerification === 'LOCAL_ONLY' ? 'Refferq only — not confirmed on Shopify' :
+                                  c.shopifyVerification === 'NOT_FOUND' ? 'Code not found on Shopify' :
+                                  c.shopifyVerification === 'UNAVAILABLE' ? 'Shopify validation unavailable' :
+                                  'No verified product association'}
+                              </span>}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{c.expiresAt ? formatDate(c.expiresAt) : 'Never'}</TableCell>
                     <TableCell>
                       {c.source === 'SHOPIFY'
-                        ? <Badge variant={c.isActive && c.shopifyStatus === 'ACTIVE' ? 'default' : 'secondary'}>{c.shopifyStatus === 'ACTIVE' ? 'Shopify active' : c.shopifyStatus || 'Shopify pending'}</Badge>
+                        ? <Badge variant={c.shopifyLiveStatus === 'ACTIVE' && c.shopifyVerification === 'VERIFIED' ? 'default' : 'secondary'}>
+                            {c.shopifyVerification === 'VERIFIED' ? c.shopifyLiveStatus :
+                              c.shopifyVerification === 'NOT_FOUND' ? 'Missing on Shopify' : 'Not verified'}
+                          </Badge>
                         : <Switch checked={c.isActive} onCheckedChange={() => handleToggle(c.id, c.isActive)} />}
                     </TableCell>
                     <TableCell className="text-right">

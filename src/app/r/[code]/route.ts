@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { signHvAttribution, shopifyAffiliateDestination } from '@/lib/hv-shopify-attribution';
+import { getShopifyCouponTargets, getShopifyProducts, validateDiscountCode } from '@/lib/hv-shopify-discounts';
 
 export async function GET(
   request: NextRequest,
@@ -128,20 +129,35 @@ export async function GET(
     // parameters are embedded in Shopify's redirect destination, so the product
     // page receives them after Shopify applies the discount.
     let finalTarget = redirectUrl.toString();
-    if (promo && redirectUrl.pathname.startsWith('/products/')) {
+    if (promo && validateDiscountCode(promo) && redirectUrl.pathname.startsWith('/products/') &&
+        affiliate.user.role === 'AFFILIATE' && affiliate.user.emailVerifiedAt) {
       const handle = decodeURIComponent(redirectUrl.pathname.slice('/products/'.length));
       const coupon = await prisma.coupon.findFirst({
         where: { code: promo, affiliateId: affiliate.id, source: 'SHOPIFY',
           isActive: true, shopifyStatus: 'ACTIVE',
-          shopifyProductHandles: { has: handle },
           startsAt: { lte: new Date() },
           OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
         select: { code: true },
       });
       if (coupon) {
-        const path = redirectUrl.pathname + redirectUrl.search;
-        finalTarget = 'https://herbalvitaly.com/discount/' + encodeURIComponent(coupon.code) +
-          '?redirect=' + encodeURIComponent(path);
+        try {
+          const live = (await getShopifyCouponTargets([coupon.code]))[coupon.code.toUpperCase()];
+          // Must check the actual Shopify target rather than Refferq's
+          // legacy, frequently empty product mapping. Fail closed on API errors.
+          const validProduct = live?.scope === 'PRODUCTS'
+            ? live.products.some(p => p.handle === handle) && !live.truncated
+            : live?.scope === 'ALL'
+              ? (await getShopifyProducts()).some(p => p.handle === handle)
+              : false;
+          if (live?.status === 'ACTIVE' && validProduct) {
+            const productPathWithSignedTracking = redirectUrl.pathname + redirectUrl.search;
+            finalTarget = 'https://herbalvitaly.com/discount/' + encodeURIComponent(coupon.code) +
+              '?redirect=' + encodeURIComponent(productPathWithSignedTracking);
+          }
+        } catch {
+          // Still redirect to the eligible store URL with signed referral
+          // details, but do not pretend an unverified code is applied.
+        }
       }
     }
 
