@@ -10,15 +10,23 @@ import { normalizeDiscountCode, resolveOrderAttribution } from '@/lib/hv-order-a
 // commissions or changes balances. Enable subscriptions only after credentials
 // and domain have been reviewed by Herbal Vitaly.
 export async function POST(request: NextRequest) {
-  if (process.env.VERCEL_ENV !== 'preview') {
-    return NextResponse.json({ error: 'Staging only' }, { status: 423 });
+  // Accept live Shopify HTTPS webhook deliveries with the same verification
+  // in Preview and Production. Shopify signs with the app CLIENT SECRET.
+  if (!['preview', 'production'].includes(process.env.VERCEL_ENV || '')) {
+    return NextResponse.json({ error: 'Unsupported environment' }, { status: 423 });
   }
-  const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
+  const secret = process.env.SHOPIFY_WEBHOOK_SECRET || process.env.SHOPIFY_CLIENT_SECRET;
   const shopDomain = process.env.SHOPIFY_SHOP_DOMAIN;
-  if (!secret || !shopDomain) {
-    return NextResponse.json({ error: 'Shopify webhook credentials not configured' }, { status: 503 });
+  if (!secret || shopDomain !== 'kk20pd-es.myshopify.com') {
+    return NextResponse.json({ error: 'Shopify webhook verification unavailable' }, { status: 503 });
+  }
+  const requestSize = Number(request.headers.get('content-length') || 0);
+  if (requestSize > 1024 * 1024) {
+    return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
   }
   const raw = await request.text();
+  if (Buffer.byteLength(raw, 'utf8') > 1024 * 1024)
+    return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
   const sourceShop = request.headers.get('x-shopify-shop-domain');
   const signature = request.headers.get('x-shopify-hmac-sha256');
   const topic = request.headers.get('x-shopify-topic');
