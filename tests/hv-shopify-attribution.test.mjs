@@ -56,7 +56,8 @@ test('tracking remains separate from affiliate cash-out and preserves audited we
   const fs = await import('node:fs');
   const url = new URL('../src/app/api/integrations/shopify/orders/route.ts', import.meta.url);
   const source = fs.readFileSync(url, 'utf8');
+  const ingest = fs.readFileSync(new URL('../src/lib/hv-order-ingest.ts', import.meta.url), 'utf8');
   assert.match(source, /verifyShopifyHmac\(raw, signature, secret\)/);
-  assert.match(source, /verifiedShopifyOrderAttribution/);
-  assert.doesNotMatch(source, /create.*[Cc]ommission\(/);
+  assert.match(ingest, /verifiedShopifyOrderAttribution/);
+  assert.doesNotMatch(source + ingest, /create.*[Cc]ommission\(/);
 });
