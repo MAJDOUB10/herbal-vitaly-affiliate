@@ -51,6 +51,8 @@ test('only authenticated admin can install subscriptions for the official domain
  assert.match(route, /state\.hasOrderAccess/);
  assert.match(route, /read_orders/);
  assert.match(route, /webhookSubscriptionCreate/);
+ assert.match(route, /userErrors \{ field message \}/);
+ assert.doesNotMatch(route, /userErrors \{ field message code \}/);
  assert.match(route, /partner\.herbalvitaly\.com\/api\/integrations\/shopify\/orders/);
  assert.match(page, /Activate Shopify order webhooks/);
  assert.match(page, /Recover recent Shopify orders/);

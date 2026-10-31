@@ -25,7 +25,7 @@ const LIST = `query HvOrderWebhookStatus {
 const CREATE = `mutation HvSubscribeOrderWebhook($topic: WebhookSubscriptionTopic!, $input: WebhookSubscriptionInput!) {
   webhookSubscriptionCreate(topic: $topic, webhookSubscription: $input) {
     webhookSubscription { id topic uri }
-    userErrors { field message code }
+    userErrors { field message }
   }
 }`;
 async function isAdmin(request: NextRequest): Promise<boolean> {
