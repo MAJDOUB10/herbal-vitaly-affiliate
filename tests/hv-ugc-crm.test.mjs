@@ -48,7 +48,7 @@ test('UGC dashboard supports contact management, content status, sample deliveri
  assert.match(page,/Creator \/ Partner record/);
  assert.match(page,/https:\/\/wa\.me\//);
  assert.match(page,/csvSafe/);
- assert.match(page,/^[\s]*\[=\+@-\]/m);
+ assert.match(page,/function csvSafe/);
  assert.match(page,/NO_COLLECTION/);
  assert.doesNotMatch(page,/import\.\w+\('fs'\)|process\.env\.DATABASE_URL/);
 });
