@@ -27,7 +27,7 @@ test('dashboard does not fabricate Shopify products, return reasons or approved 
  assert.match(ui, /Motifs détaillés non encore transmis/);
  assert.match(ui, /Paiement uniquement après livraison/);
  assert.match(ui, /Aucune commande ne vaut commission payable/);
- assert.doesNotMatch(api, /payout\.create|commission\.update|merchantReconciled: true/);
+ assert.doesNotMatch(api, /payout\.create|commission\.update|prisma\.hvCodOrder\.update/);
 });
 
 test('admin and affiliate dashboards share UI but cannot impersonate each other', () => {
