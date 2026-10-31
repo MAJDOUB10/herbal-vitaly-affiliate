@@ -62,7 +62,10 @@ test('only Shopify-verified active coupons are shareable and the tracking token 
   const route=read('src/app/r/[code]/route.ts');
   const portal=read('src/app/api/affiliate/shopify-coupons/route.ts');
   const creator=read('src/app/api/admin/coupons/route.ts');
-  assert.match(route,/shopifyProductHandles: \{ has: handle \}/);
+  assert.match(route,/getShopifyCouponTargets/);
+  assert.match(route,/live\?\.status === 'ACTIVE'/);
+  assert.match(route,/live\.products\.some\(p => p\.handle === handle\)/);
+  assert.match(route,/affiliateId: affiliate\.id/);
   assert.match(route,/redirectUrl\.pathname \+ redirectUrl\.search/);
   assert.match(route,/shopifyStatus: 'ACTIVE'/);
   assert.match(portal,/affiliateId: user\.affiliate\.id/);
