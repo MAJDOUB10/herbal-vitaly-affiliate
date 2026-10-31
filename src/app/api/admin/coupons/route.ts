@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { randomBytes } from 'node:crypto';
-import { buildBasicDiscountInput, createShopifyDiscount, getShopifyDiscountByCode, getShopifyProducts, validateDiscountCode, validateProductIds } from '@/lib/hv-shopify-discounts';
+import { buildBasicDiscountInput, createShopifyDiscount, getShopifyDiscountByCode, getShopifyProducts, getShopifyCouponTargets, validateDiscountCode, validateProductIds } from '@/lib/hv-shopify-discounts';
 
 async function verifyAdmin(request: NextRequest) {
   try {
@@ -25,7 +25,32 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json({ success: true, coupons });
+    // Shopify (not Refferq's old empty product arrays) is the authority
+    // for actual product eligibility and discount activation.
+    let verificationError = false;
+    let targets: Awaited<ReturnType<typeof getShopifyCouponTargets>> = {};
+    try {
+      targets = await getShopifyCouponTargets(
+        coupons.filter(c => c.source === 'SHOPIFY').map(c => c.code)
+      );
+    } catch {
+      verificationError = true;
+    }
+    const enriched = coupons.map(c => {
+      const target = targets[c.code.toUpperCase()];
+      return {
+        ...c,
+        shopifyVerification: c.source !== 'SHOPIFY' ? 'LOCAL_ONLY' :
+          target ? 'VERIFIED' : verificationError ? 'UNAVAILABLE' : 'NOT_FOUND',
+        shopifyLiveStatus: target?.status || null,
+        shopifyProductScope: target?.scope || null,
+        eligibleProducts: target?.products || [],
+        eligibleCollections: target?.collections || [],
+        productListTruncated: Boolean(target?.truncated),
+      };
+    });
+    return NextResponse.json({ success: true, coupons: enriched, shopifyVerificationError: verificationError },
+      { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     console.error('Admin coupons GET error:', error);
     return NextResponse.json({ error: 'Failed to fetch coupons' }, { status: 500 });
