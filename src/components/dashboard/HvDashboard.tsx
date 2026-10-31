@@ -58,10 +58,10 @@ function Metric({ title, value, note, icon: Icon, accent = green }: {
     {note && <p className="mt-1 text-xs text-slate-500">{note}</p>}
   </div>;
 }
-function Panel({ title, subtitle, children }: {
-  title: string; subtitle?: string; children: ReactNode;
+function Panel({ title, subtitle, children, id }: {
+  title: string; subtitle?: string; children: ReactNode; id?: string;
 }) {
-  return <section className="min-w-0 rounded-2xl border border-[#E4EBE6] bg-white p-4 shadow-sm">
+  return <section id={id} className="scroll-mt-24 min-w-0 rounded-2xl border border-[#E4EBE6] bg-white p-4 shadow-sm">
     <h2 className="font-semibold text-[#173621]">{title}</h2>
     {subtitle && <p className="mb-3 mt-1 text-xs text-slate-500">{subtitle}</p>}
     {children}
@@ -285,7 +285,7 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
             </ResponsiveContainer>
           </div>
         </Panel>
-        <Panel title="Statuts de livraison" subtitle="Livrées, en attente, remboursées et annulées">
+        <Panel id="delivery-status" title="Statuts de livraison" subtitle="Livrées, en attente, remboursées et annulées">
           {statusChart.length ? <div className="h-56" role="img" aria-label="Répartition des statuts de livraison">
             <ResponsiveContainer width="100%" height="100%"><PieChart>
               <Pie data={statusChart} dataKey="value" nameKey="name" innerRadius={55} outerRadius={76}>
@@ -309,13 +309,13 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Motifs de retour" subtitle="Transparence des données Bosta / Shopify">
+        <Panel id="return-reasons" title="Motifs de retour" subtitle="Transparence des données Bosta / Shopify">
           <div className="flex min-h-28 items-center gap-3 rounded-xl bg-slate-50 p-4">
             <RotateCcw className="h-7 w-7 text-slate-400"/>
             <p className="text-sm text-slate-600">Motifs détaillés non encore transmis au modèle de commandes Refferq. <strong>{totals.returned} remboursée(s)</strong> et <strong>{totals.cancelled} annulée(s)</strong> dans la sélection. Aucun motif ne sera deviné.</p>
           </div>
         </Panel>
-        <Panel title="Commissions enregistrées" subtitle="Soldes issus du registre des commissions, pas d'estimations automatiques sur les commandes COD">
+        <Panel id="payout-overview" title="Commissions enregistrées" subtitle="Soldes issus du registre des commissions, pas d'estimations automatiques sur les commandes COD">
           <div className="grid grid-cols-3 gap-3">
             {[['En attente',data.finance.pendingEGP],['Approuvées',data.finance.approvedEGP],['Payées',data.finance.paidEGP]].map(([label,value]) =>
               <div key={String(label)} className="rounded-xl bg-[#F5F9F6] p-3">
@@ -338,7 +338,7 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
         </div>
       </Panel>}
 
-      <Panel title={admin ? 'Catalogue Shopify' : 'Mes liens produits Shopify'}
+      <Panel id="shopify-products" title={admin ? 'Catalogue Shopify' : 'Mes liens produits Shopify'}
         subtitle={admin ? 'Produits actifs publiés sur herbalvitaly.com, avec accès direct aux pages.' :
           'Liens attribués à votre compte avec code Shopify ; seuls les coupons actifs et vérifiés sont présentés.'}>
         {catalogError && <p role="alert" className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Catalogue indisponible : {catalogError}</p>}
@@ -364,7 +364,7 @@ export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
         </div>
       </Panel>
 
-      <Panel title={admin ? 'Commandes Shopify · Tous les partenaires' : 'Mes commandes attribuées'}
+      <Panel id="order-list" title={admin ? 'Commandes Shopify · Tous les partenaires' : 'Mes commandes attribuées'}
         subtitle="Aucune commande ne vaut commission payable avant rapprochement COD/Bosta. Les motifs de retour et les produits ne sont pas encore synchronisés par ligne.">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
