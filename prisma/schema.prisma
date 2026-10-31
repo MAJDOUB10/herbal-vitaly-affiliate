@@ -747,3 +747,76 @@ model HvCodEvent {
   @@index([orderName])
   @@map("hv_cod_events")
 }
+
+
+/// Operational creator CRM, independent from the enrolled affiliate user account.
+/// A prospect can be tracked before any affiliate approval, coupon or commission.
+model UgcContact {
+  id              String       @id @default(cuid())
+  externalId      String?      @unique @map("external_id")
+  name            String
+  socialUrl       String?      @map("social_url")
+  phone           String?
+  contactStatus   String       @default("NEW") @map("contact_status")
+  acceptance      String       @default("PENDING")
+  qualification   String       @default("UNREVIEWED")
+  kind            String       @default("UGC")
+  priority        Int          @default(3)
+  budgetEGP       Int?         @map("budget_egp")
+  contentUrl      String?      @map("content_url")
+  product         String?
+  videoConcept    String?      @map("video_concept")
+  contentStatus   String       @default("IDEA") @map("content_status")
+  notes           String?
+  affiliateId     String?      @map("affiliate_id")
+  nextFollowUpAt  DateTime?    @map("next_follow_up_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  shipments       UgcShipment[]
+  activities      UgcContactActivity[]
+
+  @@index([contactStatus])
+  @@index([kind])
+  @@index([affiliateId])
+  @@index([nextFollowUpAt])
+  @@map("ugc_contacts")
+}
+
+/// Creator product samples and Bosta shipments; NOT COD sales orders.
+/// CollectionType can be NO_COLLECTION when sample delivery does not collect cash.
+model UgcShipment {
+  id             String       @id @default(cuid())
+  contactId      String?      @map("contact_id")
+  trackingNumber String?      @unique @map("tracking_number")
+  recipientName  String       @map("recipient_name")
+  phone          String?
+  governorate    String?
+  district       String?
+  deliveryStatus String       @default("UNKNOWN") @map("delivery_status")
+  deliveryType   String?      @map("delivery_type")
+  collectionType String       @default("NO_COLLECTION") @map("collection_type")
+  amountEGP      Int?         @map("amount_egp")
+  capturedAt     DateTime?    @map("captured_at")
+  source         String?
+  notes          String?
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  contact        UgcContact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([contactId])
+  @@index([deliveryStatus])
+  @@map("ugc_shipments")
+}
+
+model UgcContactActivity {
+  id         String       @id @default(cuid())
+  contactId  String       @map("contact_id")
+  actorId    String       @map("actor_id")
+  action     String
+  details    String?
+  createdAt  DateTime     @default(now()) @map("created_at")
+  contact    UgcContact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId, createdAt])
+  @@map("ugc_contact_activities")
+}
