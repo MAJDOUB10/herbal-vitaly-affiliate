@@ -53,7 +53,9 @@ test('only authenticated admin can install subscriptions for the official domain
  assert.match(route, /webhookSubscriptionCreate/);
  assert.match(route, /userErrors \{ field message \}/);
  assert.doesNotMatch(route, /userErrors \{ field message code \}/);
- assert.match(route, /partner\.herbalvitaly\.com\/api\/integrations\/shopify\/orders/);
+ assert.match(route, /herbal-vitaly-affiliate\\.vercel\\.app\\/api\\/integrations\\/shopify\\/orders/);
+ assert.doesNotMatch(route, /const ENDPOINT = 'https:\\/\\/partner\\.herbalvitaly\\.com/);
+ assert.match(route, /request\\.headers\\.get\\('origin'\\) !== 'https:\\/\\/partner\\.herbalvitaly\\.com'/);
  assert.match(page, /Activate Shopify order webhooks/);
  assert.match(page, /Recover recent Shopify orders/);
  const recovery = read('src/app/api/admin/shopify/backfill-orders/route.ts');
