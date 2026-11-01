@@ -31,6 +31,14 @@ on:
       - 'src/app/affiliate/coupons/**'
       - 'src/app/login/page.tsx'
       - 'tests/partner-selected-promo-code.test.mjs'
+      - 'src/app/affiliate/support/**'
+      - 'src/app/admin/support/**'
+      - 'src/app/api/affiliate/support/**'
+      - 'src/app/api/admin/support/**'
+      - 'src/components/support/**'
+      - 'src/lib/hv-support.ts'
+      - 'src/app/affiliate/layout.tsx'
+      - 'tests/hv-support-center.test.mjs'
       - '.github/workflows/ugc-crm-ci.yml'
   push:
     branches:
@@ -65,6 +73,14 @@ on:
       - 'src/app/affiliate/coupons/**'
       - 'src/app/login/page.tsx'
       - 'tests/partner-selected-promo-code.test.mjs'
+      - 'src/app/affiliate/support/**'
+      - 'src/app/admin/support/**'
+      - 'src/app/api/affiliate/support/**'
+      - 'src/app/api/admin/support/**'
+      - 'src/components/support/**'
+      - 'src/lib/hv-support.ts'
+      - 'src/app/affiliate/layout.tsx'
+      - 'tests/hv-support-center.test.mjs'
       - '.github/workflows/ugc-crm-ci.yml'
 jobs:
   verify:
