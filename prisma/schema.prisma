@@ -546,6 +546,19 @@ enum ReportFrequency {
 // Coupon / Double-sided Rewards
 // ───────────────────────────────────────────────
 
+model AutoCouponSettings {
+  id              String   @id @default("default")
+  enabled         Boolean  @default(true)
+  prefix          String   @default("HV")
+  discountPercent Float    @default(15) @map("discount_percent")
+  productHandles  String[] @default(["tiynefret", "ushabti"]) @map("product_handles")
+  sendEmail       Boolean  @default(true) @map("send_email")
+  updatedBy       String?  @map("updated_by")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("auto_coupon_settings")
+}
+
 model Coupon {
   id              String       @id @default(cuid())
   code            String       @unique
