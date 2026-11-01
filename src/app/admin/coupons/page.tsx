@@ -20,7 +20,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Ticket, Plus, Pencil, Trash2, Copy, Check, ExternalLink, Link2,
+  Ticket, Plus, Pencil, Trash2, Copy, Check, ExternalLink, Link2, Settings2,
 } from 'lucide-react';
 
 interface Coupon {
@@ -50,9 +50,16 @@ interface Coupon {
 
 type PartnerChoice = { id: string; name: string; referralCode: string };
 type ProductChoice = { id: string; title: string; handle: string; onlineStoreUrl: string };
+type AutoCouponPolicy = {
+  enabled: boolean; prefix: string; discountPercent: number; productHandles: string[]; sendEmail: boolean;
+};
 
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [autoPolicy, setAutoPolicy] = useState<AutoCouponPolicy | null>(null);
+  const [autoPolicySaving, setAutoPolicySaving] = useState(false);
+  const [autoPolicyError, setAutoPolicyError] = useState('');
+  const [autoPolicySuccess, setAutoPolicySuccess] = useState('');
   const [partners, setPartners] = useState<PartnerChoice[]>([]);
   const [products, setProducts] = useState<ProductChoice[]>([]);
   const [catalogError, setCatalogError] = useState('');
@@ -73,6 +80,14 @@ export default function CouponsPage() {
 
   useEffect(() => {
     fetchCoupons();
+    fetch('/api/admin/coupons/auto-settings', { cache: 'no-store' })
+      .then(async response => {
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.error || 'Unable to load coupon automation');
+        return data;
+      })
+      .then(data => setAutoPolicy(data.policy))
+      .catch(error => setAutoPolicyError(error instanceof Error ? error.message : 'Unable to load coupon automation'));
     fetch('/api/admin/coupons/partners', { cache: 'no-store' })
       .then(response => response.ok ? response.json() : null)
       .then(data => { if (data?.success) setPartners(data.partners || []); })
@@ -95,6 +110,31 @@ export default function CouponsPage() {
       console.error('Failed to fetch coupons:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveAutoPolicy = async () => {
+    if (!autoPolicy) return;
+    setAutoPolicyError('');
+    setAutoPolicySuccess('');
+    if (!autoPolicy.productHandles.length) {
+      setAutoPolicyError('Select at least one Shopify product.'); return;
+    }
+    setAutoPolicySaving(true);
+    try {
+      const response = await fetch('/api/admin/coupons/auto-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(autoPolicy),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Unable to save');
+      setAutoPolicy(data.policy);
+      setAutoPolicySuccess('Saved! New partners will use these rules. Existing Shopify discounts remain unchanged.');
+    } catch (error) {
+      setAutoPolicyError(error instanceof Error ? error.message : 'Unable to save settings');
+    } finally {
+      setAutoPolicySaving(false);
     }
   };
 
@@ -271,6 +311,89 @@ export default function CouponsPage() {
           <CardContent><div className="text-2xl font-bold">{stats.totalUses}</div></CardContent>
         </Card>
       </div>
+
+      <Card id="automatic-coupons" className="border-[#D8E8DE]">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Settings2 className="h-5 w-5 text-primary" />
+            <CardTitle>Automatic partner promo codes</CardTitle>
+          </div>
+          <CardDescription>
+            Edit the generation rules for new, email-verified partners directly from your Admin dashboard.
+            Existing Shopify discounts and partner codes will not change.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {!autoPolicy ? (
+            <p className="text-sm text-muted-foreground">Coupon automation configuration is unavailable.</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+                <div>
+                  <Label htmlFor="auto-coupon-enabled" className="font-semibold">Create Shopify codes automatically</Label>
+                  <p className="text-xs text-muted-foreground">After OTP verification and partner activation</p>
+                </div>
+                <Switch id="auto-coupon-enabled" checked={autoPolicy.enabled}
+                  onCheckedChange={enabled => setAutoPolicy({ ...autoPolicy, enabled })} />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="auto-coupon-prefix">Code prefix</Label>
+                  <Input id="auto-coupon-prefix" value={autoPolicy.prefix} maxLength={10}
+                    onChange={e => setAutoPolicy({ ...autoPolicy, prefix: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'') })}
+                    className="max-w-xs font-mono" placeholder="HV" />
+                  <p className="text-xs text-muted-foreground">Example: {autoPolicy.prefix || 'HV'}SARA1234 (unique per partner)</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="auto-coupon-percent">Customer discount (%)</Label>
+                  <Input id="auto-coupon-percent" type="number" min={1} max={50} step="0.01"
+                    value={autoPolicy.discountPercent}
+                    onChange={e => setAutoPolicy({ ...autoPolicy, discountPercent: Number(e.target.value) })}
+                    className="max-w-xs" />
+                  <p className="text-xs text-muted-foreground">1–50%. This is the customer's discount, not partner commission.</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Shopify products eligible for new codes</Label>
+                {catalogError && <p role="alert" className="text-sm text-red-700">{catalogError}</p>}
+                <div className="grid max-h-52 gap-2 overflow-y-auto rounded-lg border p-3 sm:grid-cols-2">
+                  {products.map(p => (
+                    <label key={p.id} className="flex cursor-pointer items-start gap-2 text-sm">
+                      <input type="checkbox" className="mt-1 accent-[#1F6B3A]"
+                        checked={autoPolicy.productHandles.includes(p.handle)}
+                        onChange={e => setAutoPolicy({
+                          ...autoPolicy,
+                          productHandles: e.target.checked
+                            ? [...autoPolicy.productHandles, p.handle]
+                            : autoPolicy.productHandles.filter(h => h !== p.handle),
+                        })} />
+                      <span>{p.title}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+                <div>
+                  <Label htmlFor="auto-coupon-email" className="font-semibold">Email the code to the partner</Label>
+                  <p className="text-xs text-muted-foreground">Only after Shopify confirms the code is active</p>
+                </div>
+                <Switch id="auto-coupon-email" checked={autoPolicy.sendEmail}
+                  onCheckedChange={sendEmail => setAutoPolicy({ ...autoPolicy, sendEmail })} />
+              </div>
+              {autoPolicyError && <p role="alert" className="text-sm font-medium text-red-600">{autoPolicyError}</p>}
+              {autoPolicySuccess && <p role="status" className="text-sm font-medium text-green-700">{autoPolicySuccess}</p>}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground">
+                  Modify already-issued codes in Shopify Discounts. Changes here affect future automatic codes only.
+                </p>
+                <Button disabled={autoPolicySaving || !products.length} onClick={saveAutoPolicy}>
+                  {autoPolicySaving ? 'Saving...' : 'Save automatic generation rules'}
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {mappingError && (
         <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{mappingError}</p>
