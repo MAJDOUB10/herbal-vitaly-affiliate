@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
+import { provisionAffiliateShopifyCoupon } from '@/lib/auto-partner-shopify-coupon';
 import { prisma } from '@/lib/prisma';
 import * as bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
@@ -51,6 +52,15 @@ export async function POST(request: NextRequest) {
         role: user.role, hasAffiliate: user.role === 'AFFILIATE',
       },
     }, { headers: { 'Cache-Control': 'no-store' } });
+    // Idempotent recovery if Shopify or Resend was unavailable after OTP.
+    // Existing active coupon assignments are preserved.
+    if (user.role === 'AFFILIATE') {
+      const verifiedUserId = user.id;
+      after(async () => {
+        try { await provisionAffiliateShopifyCoupon(verifiedUserId); }
+        catch { console.error('Partner coupon email or Shopify creation will retry on next sign-in'); }
+      });
+    }
     response.cookies.set('auth-token', token, {
       httpOnly: true, secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax', maxAge: 86400, path: '/',

@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
+import { provisionAffiliateShopifyCoupon } from '@/lib/auto-partner-shopify-coupon';
 import { otpService } from '@/lib/otp';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -28,6 +29,15 @@ export async function POST(request: NextRequest) {
 
     const result = await otpService.verifyOTP(email, code);
     if (!result.success) return NextResponse.json({ success: false, error: result.message }, { status: 400 });
+    // Success of OTP verification does not depend on Shopify or email uptime.
+    // Run the idempotent integration after returning the verification response.
+    if (result.user?.role === 'AFFILIATE' && !result.pendingApproval) {
+      const verifiedUserId = result.user.id;
+      after(async () => {
+        try { await provisionAffiliateShopifyCoupon(verifiedUserId); }
+        catch { console.error('Partner coupon onboarding deferred; sign-in will retry'); }
+      });
+    }
     return NextResponse.json({
       success: true,
       pendingApproval: Boolean(result.pendingApproval),
