@@ -6,7 +6,6 @@
 import { prisma } from '@/lib/prisma';
 import { Resend } from 'resend';
 import { getAutoCouponSettings } from '@/lib/auto-coupon-settings';
-import { automaticShortCouponCode } from '@/lib/short-partner-code';
 import {
   buildBasicDiscountInput, createShopifyDiscount, getShopifyDiscountByCode,
   getShopifyProducts, trackedAffiliateLandingLink, validateDiscountCode,
@@ -87,7 +86,14 @@ async function sendCouponEmail(couponId: string, email: string, name: string, re
   }
 }
 
-export async function provisionAffiliateShopifyCoupon(userId: string): Promise<void> {
+/** Partner chooses their own 3-character code after a verified password login.
+ * No code is created silently during registration or on sign-in.
+ * Retrying a previously reserved code is allowed only for its owner.
+ */
+export async function provisionAffiliateShopifyCoupon(userId: string, requestedCode: string): Promise<void> {
+  const chosenCode = requestedCode.trim().toUpperCase();
+  if (!/^[A-Z0-9]{3}$/.test(chosenCode))
+    throw new Error('Choose exactly 3 letters or numbers');
   // This feature is never executed against Shopify from Preview or local builds.
   if (process.env.VERCEL_ENV !== 'production' ||
       process.env.HV_ENABLE_SHOPIFY_DISCOUNT_WRITES !== 'true') return;
@@ -103,65 +109,59 @@ export async function provisionAffiliateShopifyCoupon(userId: string): Promise<v
   const settings = await getAutoCouponSettings();
   if (!settings.enabled) return;
   const affiliateId = user.affiliate.id;
-  // Existing coupons keep their original long codes. Only new onboarding
-  // coupons use a 3-character code; never rename an issued Shopify discount.
+  // Preserve all existing assignments. A partner may not rename an
+  // issued or reserved Shopify code by submitting a different suggestion.
   let coupon = await prisma.coupon.findFirst({
     where: { affiliateId, description: 'Automatic OTP-verified affiliate onboarding' },
     orderBy: { createdAt: 'asc' },
   });
+  if (coupon && coupon.code !== chosenCode)
+    throw new Error('A different promo code is already assigned to your account');
   if (!coupon) {
-    const activeAssigned = await prisma.coupon.findFirst({
+    const assigned = await prisma.coupon.findFirst({
       where: { affiliateId, source: 'SHOPIFY', isActive: true },
-      select: { id: true },
+      select: { code: true },
     });
-    if (activeAssigned) return;
-  }
+    if (assigned)
+      throw new Error('A Shopify promo code is already assigned to your account');
 
-  if (!coupon) {
-    const secret = process.env.HV_ATTRIBUTION_SECRET || process.env.JWT_SECRET;
-    if (!secret) throw new Error('Short code signing key is missing');
+    // Never adopt a code owned by another account or an existing Shopify
+    // discount, even if its rate and product scope appear compatible.
+    if (await prisma.coupon.findUnique({ where: { code: chosenCode }, select: { id: true } }))
+      throw new Error('This code is already taken. Choose another.');
+    if (await getShopifyDiscountByCode(chosenCode))
+      throw new Error('This code is already taken. Choose another.');
 
     const products = await getShopifyProducts();
     const chosen = settings.productHandles.map(handle => products.find(p => p.handle === handle));
     if (chosen.some(p => !p))
       throw new Error('Required active Shopify products are not available');
 
-    // Deterministic, HMAC-based candidates ensure concurrent OTP/sign-in
-    // retries compete for the same codes. Reserve in Neon before Shopify writes.
-    for (let attempt = 0; attempt < 96; attempt++) {
-      const candidate = automaticShortCouponCode(affiliateId, attempt, secret);
-      if (!validateDiscountCode(candidate)) throw new Error('Invalid short Shopify coupon');
-      if (await prisma.coupon.findUnique({ where: { code: candidate }, select: { id: true } }))
-        continue;
-      if (await getShopifyDiscountByCode(candidate)) continue;
-
-      try {
-        coupon = await prisma.coupon.create({
-          data: {
-            code: candidate, affiliateId, createdBy: user.id,
-            description: 'Automatic OTP-verified affiliate onboarding',
-            discountType: 'PERCENTAGE', discountValue: settings.discountPercent, currency: 'EGP',
-            shopifyProductIds: chosen.map(p => p!.id),
-            shopifyProductHandles: [...settings.productHandles],
-            source: 'REFFERQ_PENDING', shopifyStatus: 'PENDING',
-            isActive: false, startsAt: new Date(Date.now() - 60_000),
-          },
-        });
-        break;
-      } catch (error) {
-        // Partial unique index on affiliate_id prevents multiple automatic
-        // codes for one partner, even if two parallel requests pick different codes.
-        const reserved = await prisma.coupon.findFirst({
-          where: { affiliateId, description: 'Automatic OTP-verified affiliate onboarding' },
-          orderBy: { createdAt: 'asc' },
-        });
-        if (reserved) { coupon = reserved; break; }
-        if (error && typeof error === 'object' && 'code' in error &&
-            error.code === 'P2002') continue;
-        throw error;
-      }
+    try {
+      coupon = await prisma.coupon.create({
+        data: {
+          code: chosenCode, affiliateId, createdBy: user.id,
+          description: 'Automatic OTP-verified affiliate onboarding',
+          discountType: 'PERCENTAGE', discountValue: settings.discountPercent, currency: 'EGP',
+          shopifyProductIds: chosen.map(p => p!.id),
+          shopifyProductHandles: [...settings.productHandles],
+          source: 'REFFERQ_PENDING', shopifyStatus: 'PENDING',
+          isActive: false, startsAt: new Date(Date.now() - 60_000),
+        },
+      });
+    } catch (error) {
+      // Unique DB indexes prevent duplicate code assignment and multiple
+      // automatic coupons for one affiliate during concurrent requests.
+      const reserved = await prisma.coupon.findFirst({
+        where: { affiliateId, description: 'Automatic OTP-verified affiliate onboarding' },
+        orderBy: { createdAt: 'asc' },
+      });
+      if (reserved && reserved.code === chosenCode) coupon = reserved;
+      else if (reserved) throw new Error('A different promo code is already assigned to your account');
+      else if (error && typeof error === 'object' && 'code' in error &&
+               error.code === 'P2002') throw new Error('This code is already taken. Choose another.');
+      else throw error;
     }
-    if (!coupon) throw new Error('No available 3-character Shopify promo code');
   }
   const code = coupon.code;
 
