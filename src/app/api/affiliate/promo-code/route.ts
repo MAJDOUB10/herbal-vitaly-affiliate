@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAutoCouponSettings } from '@/lib/auto-coupon-settings';
-import { getShopifyDiscountByCode } from '@/lib/hv-shopify-discounts';
+import { getShopifyDiscountByCode, validateDiscountCode } from '@/lib/hv-shopify-discounts';
 import { provisionAffiliateShopifyCoupon } from '@/lib/auto-partner-shopify-coupon';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -9,8 +9,8 @@ const NO_STORE = { 'Cache-Control': 'private, no-store' };
 
 function selectedCode(value: unknown): string | null {
   if (typeof value !== 'string') return null;
-  const code = value.trim().toUpperCase();
-  return /^[A-Z0-9]{3}$/.test(code) ? code : null;
+  // Reuse exactly the same 3–40 character policy as Shopify coupon creation.
+  return validateDiscountCode(value);
 }
 
 async function verifiedPartner(request: NextRequest) {
@@ -36,7 +36,7 @@ async function assignedCoupon(affiliateId: string) {
   });
 }
 
-/** After login: display the existing code or check a preferred 3-character one. */
+/** After login: display the existing code or check a partner-selected code. */
 export async function GET(request: NextRequest) {
   const partner = await verifiedPartner(request);
   if (!partner) return NextResponse.json({ error: 'Verified partner login required' }, { status: 401 });
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, assigned: null, enabled: policy.enabled },
         { headers: NO_STORE });
     const code = selectedCode(proposed);
-    if (!code) return NextResponse.json({ error: 'Enter exactly 3 letters or numbers' },
+    if (!code) return NextResponse.json({ error: 'Enter 3–40 characters: letters, numbers, - or _' },
       { status: 422, headers: NO_STORE });
     if (!policy.enabled) return NextResponse.json({ success: true, available: false,
       message: 'New promo codes are temporarily disabled' }, { headers: NO_STORE });
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
   try {
     const submitted = await request.json();
     const code = selectedCode(submitted?.code);
-    if (!code) return NextResponse.json({ error: 'Choose exactly 3 letters or numbers' }, { status: 422 });
+    if (!code) return NextResponse.json({ error: 'Choose 3–40 characters: letters, numbers, - or _' }, { status: 422 });
     const policy = await getAutoCouponSettings();
     if (!policy.enabled)
       return NextResponse.json({ error: 'Partner promo code creation is disabled by Admin' }, { status: 423 });

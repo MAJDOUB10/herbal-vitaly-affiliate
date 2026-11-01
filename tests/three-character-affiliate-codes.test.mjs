@@ -28,9 +28,9 @@ test('automatic codes are EXACTLY 3 simple uppercase letters/digits without ambi
   assert.throws(()=>automaticShortCouponCode('partner',0,''));
 });
 
-test('partner-chosen codes are checked in Shopify and Refferq before creation',()=>{
+test('partner-chosen codes are checked with the Shopify validator and Refferq before creation',()=>{
   assert.ok(onboarding.includes("requestedCode.trim().toUpperCase()"));
-  assert.ok(onboarding.includes('/^[A-Z0-9]{3}$/.test(chosenCode)'));
+  assert.ok(onboarding.includes('validateDiscountCode(chosenCode)'));
   assert.ok(onboarding.includes('prisma.coupon.findUnique({ where: { code: chosenCode }'));
   assert.ok(onboarding.includes('getShopifyDiscountByCode(chosenCode)'));
   assert.ok(onboarding.includes('prisma.coupon.create({'));

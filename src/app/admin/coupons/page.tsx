@@ -344,8 +344,8 @@ export default function CouponsPage() {
                     <span className="text-sm font-medium">3 characters — automatic</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Three uppercase letters or digits, without confusing O/0 or I/1.
-                    No prefix. Duplicate codes are checked in Shopify and Refferq.
+                    Codes generated automatically when Admin leaves the code field blank use 3 characters.
+                    No prefix. Partners choosing their own promo code can use 3–40 characters. Duplicate codes are checked in Shopify and Refferq.
                   </p>
                 </div>
                 <div className="space-y-2">

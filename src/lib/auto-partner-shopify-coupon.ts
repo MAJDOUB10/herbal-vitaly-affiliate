@@ -86,14 +86,14 @@ async function sendCouponEmail(couponId: string, email: string, name: string, re
   }
 }
 
-/** Partner chooses their own 3-character code after a verified password login.
+/** Partner chooses their personal Shopify code after a verified password login.
  * No code is created silently during registration or on sign-in.
  * Retrying a previously reserved code is allowed only for its owner.
  */
 export async function provisionAffiliateShopifyCoupon(userId: string, requestedCode: string): Promise<void> {
   const chosenCode = requestedCode.trim().toUpperCase();
-  if (!/^[A-Z0-9]{3}$/.test(chosenCode))
-    throw new Error('Choose exactly 3 letters or numbers');
+  if (!validateDiscountCode(chosenCode))
+    throw new Error('Choose 3–40 characters: letters, numbers, - or _');
   // This feature is never executed against Shopify from Preview or local builds.
   if (process.env.VERCEL_ENV !== 'production' ||
       process.env.HV_ENABLE_SHOPIFY_DISCOUNT_WRITES !== 'true') return;
