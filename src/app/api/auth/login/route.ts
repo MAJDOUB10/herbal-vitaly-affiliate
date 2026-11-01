@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse, after } from 'next/server';
-import { provisionAffiliateShopifyCoupon } from '@/lib/auto-partner-shopify-coupon';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import * as bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
@@ -45,22 +44,25 @@ export async function POST(request: NextRequest) {
     }).setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('24h')
       .sign(new TextEncoder().encode(process.env.JWT_SECRET));
     await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } });
+    // Prompt partner choice only when no Shopify code is already assigned
+    // or reserved. Existing affiliates continue to their normal dashboard.
+    const affiliateProfile = user.role === 'AFFILIATE'
+      ? await prisma.affiliate.findUnique({ where: { userId: user.id }, select: { id: true } })
+      : null;
+    const needsPromoCode = Boolean(affiliateProfile) &&
+      !(await prisma.coupon.findFirst({
+        where: { affiliateId: affiliateProfile!.id,
+          OR: [{ source: 'SHOPIFY', isActive: true },
+               { description: 'Automatic OTP-verified affiliate onboarding' }] },
+        select: { id: true },
+      }));
     const response = NextResponse.json({
       success: true,
       user: {
         id: user.id, email: user.email, name: user.name,
-        role: user.role, hasAffiliate: user.role === 'AFFILIATE',
+        role: user.role, hasAffiliate: user.role === 'AFFILIATE', needsPromoCode: Boolean(needsPromoCode),
       },
     }, { headers: { 'Cache-Control': 'no-store' } });
-    // Idempotent recovery if Shopify or Resend was unavailable after OTP.
-    // Existing active coupon assignments are preserved.
-    if (user.role === 'AFFILIATE') {
-      const verifiedUserId = user.id;
-      after(async () => {
-        try { await provisionAffiliateShopifyCoupon(verifiedUserId); }
-        catch { console.error('Partner coupon email or Shopify creation will retry on next sign-in'); }
-      });
-    }
     response.cookies.set('auth-token', token, {
       httpOnly: true, secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax', maxAge: 86400, path: '/',

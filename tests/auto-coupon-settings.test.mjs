@@ -34,7 +34,7 @@ test('settings apply only to future Shopify discounts; existing automatically is
   assert.ok(service.includes("const code = coupon.code;"));
   assert.ok(service.includes("settings.discountPercent"));
   assert.ok(service.includes("settings.productHandles"));
-  assert.ok(service.includes('automaticShortCouponCode(affiliateId, attempt, secret)'));
+  assert.ok(service.includes('const chosenCode = requestedCode.trim().toUpperCase()'));
   assert.ok(service.includes('coupon.discountValue'));
   assert.ok(service.includes('coupon.shopifyProductHandles'));
   assert.ok(service.includes('settings.sendEmail'));

@@ -28,18 +28,18 @@ test('automatic codes are EXACTLY 3 simple uppercase letters/digits without ambi
   assert.throws(()=>automaticShortCouponCode('partner',0,''));
 });
 
-test('onboarding checks Shopify and Refferq uniqueness and retries collisions',()=>{
-  assert.ok(onboarding.includes('automaticShortCouponCode(affiliateId, attempt, secret)'));
-  assert.ok(onboarding.includes('for (let attempt = 0; attempt < 96; attempt++)'));
-  assert.ok(onboarding.includes('prisma.coupon.findUnique({ where: { code: candidate }'));
-  assert.ok(onboarding.includes('getShopifyDiscountByCode(candidate)'));
+test('partner-chosen codes are checked in Shopify and Refferq before creation',()=>{
+  assert.ok(onboarding.includes("requestedCode.trim().toUpperCase()"));
+  assert.ok(onboarding.includes('/^[A-Z0-9]{3}$/.test(chosenCode)'));
+  assert.ok(onboarding.includes('prisma.coupon.findUnique({ where: { code: chosenCode }'));
+  assert.ok(onboarding.includes('getShopifyDiscountByCode(chosenCode)'));
   assert.ok(onboarding.includes('prisma.coupon.create({'));
   assert.ok(onboarding.includes("error.code === 'P2002'"));
   assert.ok(onboarding.includes("description: 'Automatic OTP-verified affiliate onboarding'"));
   assert.ok(onboarding.includes('const code = coupon.code;'));
   assert.ok(onboarding.includes('coupon.shopifyStatus === \'ACTIVE\' && !coupon.autoEmailSentAt'));
   assert.ok(!onboarding.includes("const fromReferral ="));
-  assert.ok(!onboarding.includes('automaticPartnerCode('));
+  assert.ok(!onboarding.includes('automaticShortCouponCode('));
 });
 
 test('manual admin coupon generation uses exactly 3 characters when code field is blank',()=>{
