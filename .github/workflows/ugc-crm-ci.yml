@@ -16,6 +16,10 @@ on:
       - 'tests/register-password-ux.test.mjs'
       - 'src/lib/auto-partner-shopify-coupon.ts'
       - 'tests/auto-partner-shopify-coupon.test.mjs'
+      - 'src/lib/auto-coupon-settings.ts'
+      - 'src/app/api/admin/coupons/auto-settings/**'
+      - 'src/app/admin/coupons/**'
+      - 'tests/auto-coupon-settings.test.mjs'
       - '.github/workflows/ugc-crm-ci.yml'
   push:
     branches:
@@ -35,6 +39,10 @@ on:
       - 'tests/register-password-ux.test.mjs'
       - 'src/lib/auto-partner-shopify-coupon.ts'
       - 'tests/auto-partner-shopify-coupon.test.mjs'
+      - 'src/lib/auto-coupon-settings.ts'
+      - 'src/app/api/admin/coupons/auto-settings/**'
+      - 'src/app/admin/coupons/**'
+      - 'tests/auto-coupon-settings.test.mjs'
       - '.github/workflows/ugc-crm-ci.yml'
 jobs:
   verify:

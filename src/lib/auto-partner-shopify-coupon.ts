@@ -5,18 +5,17 @@
  */
 import { prisma } from '@/lib/prisma';
 import { Resend } from 'resend';
+import { getAutoCouponSettings } from '@/lib/auto-coupon-settings';
 import {
   buildBasicDiscountInput, createShopifyDiscount, getShopifyDiscountByCode,
   getShopifyProducts, productDiscountLink, validateDiscountCode,
 } from '@/lib/hv-shopify-discounts';
 
-const ELIGIBLE_HANDLES = ['tiynefret', 'ushabti'] as const;
-const RATE = 15;
 const RETRY_LEASE_MS = 5 * 60_000;
 
-export function automaticPartnerCode(referralCode: string, affiliateId: string): string {
-  const fromReferral = 'HV' + referralCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const fallback = 'HV' + affiliateId.toUpperCase().replace(/[^A-Z0-9]/g, '');
+export function automaticPartnerCode(referralCode: string, affiliateId: string, prefix = 'HV'): string {
+  const fromReferral = prefix + referralCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const fallback = prefix + affiliateId.toUpperCase().replace(/[^A-Z0-9]/g, '');
   const code = fromReferral.length <= 40 ? fromReferral : fallback.slice(0, 40);
   const validated = validateDiscountCode(code);
   if (!validated) throw new Error('Unable to derive an affiliate discount reference');
@@ -36,7 +35,7 @@ function safeHtml(s: string): string {
   }[x] || x));
 }
 
-async function sendCouponEmail(couponId: string, email: string, name: string, code: string) {
+async function sendCouponEmail(couponId: string, email: string, name: string, code: string, productHandles: string[], discountPercent: number) {
   const leaseAt = new Date();
   const claimed = await prisma.coupon.updateMany({
     where: {
@@ -53,24 +52,25 @@ async function sendCouponEmail(couponId: string, email: string, name: string, co
   try {
     if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL)
       throw new Error('Partner email service is not configured');
-    const links = ELIGIBLE_HANDLES.map(handle => ({
-      label: handle === 'tiynefret' ? 'TIYNEFRET' : 'USHABTI',
+    const links = productHandles.map(handle => ({
+      label: handle.toUpperCase(),
       url: productDiscountLink(code, handle),
     }));
+    const productLabel = productHandles.map(h => h.toUpperCase()).join(', ');
     const html = `<div style="font-family:Arial,sans-serif;max-width:620px;margin:0 auto;padding:28px;background:#fff;color:#163b25">
       <div style="text-align:center"><img src="https://cdn.shopify.com/s/files/1/1003/9420/5506/files/herbal-vitaly-affiliate-official-logo.png?v=1793365508" width="152" alt="Herbal Vitaly" /></div>
       <h2 style="color:#1F6B3A">Welcome to Herbal Vitaly Affiliate Hub</h2>
       <p>Hello ${safeHtml(name)}, your affiliate account is now active.</p>
       <p>Your personal Shopify discount code is:</p>
       <div style="text-align:center;padding:18px;margin:18px 0;border:1px solid #bdd7c5;border-radius:10px;font-size:25px;letter-spacing:2px;font-weight:bold;color:#1F6B3A">${safeHtml(code)}</div>
-      <p><strong>Customer discount: 15%</strong> on TIYNEFRET and USHABTI only. It cannot be combined with other discounts.</p>
+      <p><strong>Customer discount: ${discountPercent}%</strong> on ${safeHtml(productLabel)} only. It cannot be combined with other discounts.</p>
       <p>Share your personal shopping links:</p>
-      <ul>${links.map(l => `<li style="margin:9px 0"><a style="color:#1F6B3A" href="${l.url}">${l.label} — 15% off</a></li>`).join('')}</ul>
+      <ul>${links.map(l => `<li style="margin:9px 0"><a style="color:#1F6B3A" href="${l.url}">${safeHtml(l.label)} — ${discountPercent}% off</a></li>`).join('')}</ul>
       <p>Partner dashboard: <a href="https://partner.herbalvitaly.com/login">partner.herbalvitaly.com</a></p>
       <p style="font-size:12px;color:#64746a">Commissions are calculated separately and require normal order/delivery and financial verification.</p>
       <p style="color:#1F6B3A">Let nature be your medicine</p>
     </div>`;
-    const text = `Hello ${name}, your Herbal Vitaly partner account is active. Shopify code: ${code}. Your customers receive 15% off TIYNEFRET and USHABTI only. Links: ${links.map(l => l.label + ': ' + l.url).join(' | ')}. Your dashboard: https://partner.herbalvitaly.com/login. Commissions remain subject to delivery and finance verification.`;
+    const text = `Hello ${name}, your Herbal Vitaly partner account is active. Shopify code: ${code}. Your customers receive ${discountPercent}% off ${productLabel} only. Links: ${links.map(l => l.label + ': ' + l.url).join(' | ')}. Your dashboard: https://partner.herbalvitaly.com/login. Commissions remain subject to delivery and finance verification.`;
     const result = await new Resend(process.env.RESEND_API_KEY).emails.send({
       from: process.env.RESEND_FROM_EMAIL, to: email,
       subject: 'Herbal Vitaly — Your partner discount code is ready',
@@ -106,24 +106,32 @@ export async function provisionAffiliateShopifyCoupon(userId: string): Promise<v
     hasAffiliate: Boolean(user.affiliate),
   }) || !user.affiliate) return;
 
+  const settings = await getAutoCouponSettings();
+  if (!settings.enabled) return;
   const affiliateId = user.affiliate.id;
-  const code = automaticPartnerCode(user.affiliate.referralCode, affiliateId);
-
-  // An existing Shopify coupon already associated with this partner is respected.
-  // Never replace it, modify its rate or create an additional discount.
-  const alreadyAssigned = await prisma.coupon.findFirst({
-    where: { affiliateId, source: 'SHOPIFY', isActive: true, NOT: { code } },
-    select: { id: true },
+  // Reuse an existing automatic coupon even if the admin has changed prefix or rate.
+  // This prevents retries from creating a second Shopify code for the same partner.
+  let coupon = await prisma.coupon.findFirst({
+    where: { affiliateId, description: 'Automatic OTP-verified affiliate onboarding' },
+    orderBy: { createdAt: 'asc' },
   });
-  if (alreadyAssigned) return;
-
-  let coupon = await prisma.coupon.findUnique({ where: { code } });
-  if (coupon && coupon.affiliateId !== affiliateId)
-    throw new Error('Affiliate discount code collision');
+  if (!coupon) {
+    const activeAssigned = await prisma.coupon.findFirst({
+      where: { affiliateId, source: 'SHOPIFY', isActive: true },
+      select: { id: true },
+    });
+    if (activeAssigned) return;
+  }
+  const code = coupon?.code || automaticPartnerCode(user.affiliate.referralCode, affiliateId, settings.prefix);
+  if (!coupon) {
+    coupon = await prisma.coupon.findUnique({ where: { code } });
+    if (coupon && coupon.affiliateId !== affiliateId)
+      throw new Error('Affiliate discount code collision');
+  }
 
   if (!coupon) {
     const products = await getShopifyProducts();
-    const chosen = ELIGIBLE_HANDLES.map(handle => products.find(p => p.handle === handle));
+    const chosen = settings.productHandles.map(handle => products.find(p => p.handle === handle));
     if (chosen.some(p => !p))
       throw new Error('Required active Shopify products are not available');
     // Fail closed if an external discount owns this code.
@@ -133,9 +141,9 @@ export async function provisionAffiliateShopifyCoupon(userId: string): Promise<v
       coupon = await prisma.coupon.create({
         data: {
           code, affiliateId, createdBy: user.id, description: 'Automatic OTP-verified affiliate onboarding',
-          discountType: 'PERCENTAGE', discountValue: RATE, currency: 'EGP',
+          discountType: 'PERCENTAGE', discountValue: settings.discountPercent, currency: 'EGP',
           shopifyProductIds: chosen.map(p => p!.id),
-          shopifyProductHandles: [...ELIGIBLE_HANDLES],
+          shopifyProductHandles: [...settings.productHandles],
           source: 'REFFERQ_PENDING', shopifyStatus: 'PENDING',
           isActive: false, startsAt: new Date(Date.now() - 60_000),
         },
@@ -166,7 +174,7 @@ export async function provisionAffiliateShopifyCoupon(userId: string): Promise<v
       const shopify = existing
         ? { id: existing.id, status: existing.status, summary: 'Affiliate discount recovered from Shopify' }
         : await createShopifyDiscount(buildBasicDiscountInput({
-            code, discountType: 'PERCENTAGE', discountValue: RATE,
+            code, discountType: 'PERCENTAGE', discountValue: coupon.discountValue,
             productIds: coupon.shopifyProductIds, startsAt: new Date(Date.now() - 60_000),
           }));
       coupon = await prisma.coupon.update({
@@ -179,7 +187,7 @@ export async function provisionAffiliateShopifyCoupon(userId: string): Promise<v
         actorId: user.id, action: 'AUTO_CREATE_PARTNER_SHOPIFY_COUPON',
         objectType: 'COUPON', objectId: coupon.id,
         payload: { affiliateId, code, shopifyDiscountId: shopify.id,
-          scope: [...ELIGIBLE_HANDLES], percent: RATE, commissionsModified: false },
+          scope: [...coupon.shopifyProductHandles], percent: coupon.discountValue, commissionsModified: false },
       }}).catch(() => {});
     } catch (error) {
       await prisma.coupon.updateMany({
@@ -199,7 +207,8 @@ export async function provisionAffiliateShopifyCoupon(userId: string): Promise<v
     });
   }
   if (coupon.source === 'SHOPIFY' && coupon.isActive &&
-      coupon.shopifyStatus === 'ACTIVE' && !coupon.autoEmailSentAt) {
-    await sendCouponEmail(coupon.id, user.email, user.name, code);
+      coupon.shopifyStatus === 'ACTIVE' && !coupon.autoEmailSentAt && settings.sendEmail) {
+    await sendCouponEmail(coupon.id, user.email, user.name, code,
+      coupon.shopifyProductHandles, coupon.discountValue);
   }
 }
