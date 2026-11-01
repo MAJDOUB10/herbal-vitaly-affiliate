@@ -19,6 +19,7 @@ export default function AffiliateCouponsPage() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState('');
   const [preferredCode, setPreferredCode] = useState('');
+  const preferredCodeValid = /^[A-Z0-9][A-Z0-9_-]{2,39}$/.test(preferredCode);
   const [assigned, setAssigned] = useState<{ code: string; active: boolean; emailSent: boolean } | null>(null);
   const [policyEnabled, setPolicyEnabled] = useState(true);
   const [onboardingLoading, setOnboardingLoading] = useState(true);
@@ -54,7 +55,7 @@ export default function AffiliateCouponsPage() {
   }, []);
 
   useEffect(() => {
-    if (assigned || preferredCode.length !== 3) {
+    if (assigned || !preferredCodeValid) {
       setAvailability('idle');
       return;
     }
@@ -72,11 +73,11 @@ export default function AffiliateCouponsPage() {
       }
     }, 450);
     return () => { controller.abort(); clearTimeout(timer); };
-  }, [preferredCode, assigned]);
+  }, [preferredCode, preferredCodeValid, assigned]);
 
   const chooseCode = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (saving || preferredCode.length !== 3 || availability !== 'available') return;
+    if (saving || !preferredCodeValid || availability !== 'available') return;
     setSaving(true);
     setOnboardingError('');
     setOnboardingMessage('');
@@ -144,22 +145,22 @@ export default function AffiliateCouponsPage() {
             <Tag className="h-5 w-5 text-[#1F6B3A]" /> Choose your personal promo code
           </CardTitle>
           <CardDescription>
-            Your affiliate account is active. Pick exactly 3 letters or numbers, for example ALI, SAM or A7M.
+            Your affiliate account is active. Choose your own code of 3–40 characters, for example SARA15, MOHAMED or ALI2026.
             We will check Refferq and Shopify, create your discount, and email you the details.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-3" onSubmit={chooseCode}>
             <div className="space-y-2">
-              <Label htmlFor="partner-chosen-code">Your 3-character promo code</Label>
-              <Input id="partner-chosen-code" value={preferredCode} autoComplete="off" maxLength={3}
-                className="max-w-xs font-mono text-xl font-semibold tracking-[0.25em] uppercase"
-                placeholder="ALI" aria-describedby="partner-code-availability"
-                onChange={e => { setPreferredCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3)); setOnboardingError(''); }} />
+              <Label htmlFor="partner-chosen-code">Your personal promo code</Label>
+              <Input id="partner-chosen-code" value={preferredCode} autoComplete="off" minLength={3} maxLength={40}
+                className="max-w-lg font-mono text-lg font-semibold tracking-wider uppercase"
+                placeholder="SARA15" aria-describedby="partner-code-availability"
+                onChange={e => { setPreferredCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 40)); setOnboardingError(''); }} />
               <p id="partner-code-availability" role="status" aria-live="polite"
                 className={'text-sm ' + (availability === 'available' ? 'text-green-700' :
                   availability === 'taken' || availability === 'error' ? 'text-red-600' : 'text-muted-foreground')}>
-                {preferredCode.length !== 3 ? 'Enter 3 characters to check availability.' :
+                {!preferredCodeValid ? 'Enter 3–40 characters (letters, numbers, - or _), starting with a letter or number.' :
                   availability === 'checking' ? 'Checking Shopify and Refferq…' :
                   availability === 'available' ? '✓ Code available' :
                   availability === 'taken' ? 'Code already taken. Try another.' :
