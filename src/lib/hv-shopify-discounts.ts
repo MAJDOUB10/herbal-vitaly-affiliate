@@ -28,6 +28,30 @@ export function productDiscountLink(code: string, handle: string): string {
   return 'https://herbalvitaly.com/discount/' + encodeURIComponent(code) +
     '?redirect=' + encodeURIComponent(destination);
 }
+/**
+ * Partner COD pages read the actual Shopify discount from ?ref=, not the
+ * partner's unrelated Refferq referral identifier. Never use demo TEST15.
+ */
+export function affiliateLandingPageLink(code: string, handle: string): string {
+  const discount = validateDiscountCode(code);
+  if (!discount || !['tiynefret', 'ushabti'].includes(handle))
+    throw new Error('Unsupported affiliate landing page or discount');
+  return 'https://herbalvitaly.com/pages/' + handle + '-affiliate?ref=' +
+    encodeURIComponent(discount);
+}
+
+/** Refferq redirect records signed click attribution before reaching Shopify. */
+export function trackedAffiliateLandingLink(
+  referralCode: string, code: string, handle: string
+): string {
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]{1,99}$/.test(referralCode))
+    throw new Error('Invalid partner referral code');
+  const landing = affiliateLandingPageLink(code, handle);
+  return 'https://partner.herbalvitaly.com/r/' + encodeURIComponent(referralCode) +
+    '?dest=' + encodeURIComponent(landing) + '&promo=' +
+    encodeURIComponent(validateDiscountCode(code)!);
+}
+
 export type DiscountInput = {
   code: string; discountType: 'PERCENTAGE' | 'FIXED';
   discountValue: number; productIds: string[];
