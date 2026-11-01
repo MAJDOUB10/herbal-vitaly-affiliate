@@ -50,7 +50,7 @@ test('linked partners keep accounts, privilege, coupons and payouts unchanged',(
     "existing.role !== 'AFFILIATE'", "existing.status !== 'ACTIVE'",
     '!existing.emailVerifiedAt', 'googleSub: null',
     "role: 'AFFILIATE', status: 'ACTIVE'",
-    'admins.includes(identity.email)', 'userId: user.id',
+    'admins.includes(identity.email)', '!identity.authoritativeEmail', 'userId: user.id',
     'googleSub: identity.sub','emailVerifiedAt: new Date()'])
     assert.ok(core.includes(x),x);
   for(const table of ['commission','payout','hvCodOrder','coupon']) {
