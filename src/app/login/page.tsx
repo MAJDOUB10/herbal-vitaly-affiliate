@@ -35,7 +35,7 @@ export default function LoginPage() {
         setError(data.message || 'Unable to sign in.');
         return;
       }
-      router.replace(data.user.role === 'ADMIN' ? '/admin' : '/affiliate');
+      router.replace(data.user.role === 'ADMIN' ? '/admin' : data.user.needsPromoCode ? '/affiliate/coupons' : '/affiliate');
       router.refresh();
     } catch {
       setError('Connection error. Please try again.');
