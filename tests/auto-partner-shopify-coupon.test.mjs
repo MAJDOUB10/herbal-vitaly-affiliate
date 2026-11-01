@@ -14,8 +14,11 @@ test('only verified active affiliate profiles may receive automatic coupons', ()
   assert.ok(service.includes('Boolean(input.emailVerifiedAt) && input.hasAffiliate'));
   assert.ok(service.includes("process.env.VERCEL_ENV !== 'production'"));
   assert.ok(service.includes("process.env.HV_ENABLE_SHOPIFY_DISCOUNT_WRITES !== 'true'"));
-  assert.ok(service.includes("const RATE = 15"));
-  assert.ok(service.includes("['tiynefret', 'ushabti']"));
+  assert.ok(service.includes('settings.discountPercent'));
+  assert.ok(service.includes('settings.productHandles'));
+  assert.ok(service.includes('settings.prefix'));
+  assert.ok(service.includes('settings.sendEmail'));
+  assert.ok(service.includes('getAutoCouponSettings()'));
   assert.ok(service.includes('validateDiscountCode(code)'));
 });
 
@@ -28,7 +31,7 @@ test('Shopify writes must be reserved and product-scoped before a notification',
   assert.ok(service.includes('createShopifyDiscount(buildBasicDiscountInput({'));
   assert.ok(service.includes("shopify.status === 'ACTIVE'"));
   assert.ok(service.includes("coupon.shopifyStatus === 'ACTIVE' && !coupon.autoEmailSentAt"));
-  assert.ok(service.includes('await sendCouponEmail(coupon.id, user.email, user.name, code)'));
+  assert.ok(service.includes('await sendCouponEmail(coupon.id, user.email, user.name, code,'));
   for (const model of ['commission','payout','hvCodOrder']) {
     for (const operation of ['create','update','delete']) {
       assert.ok(!service.includes('prisma.' + model + '.' + operation + '('));
@@ -43,6 +46,7 @@ test('email sending is idempotent and limited to active Shopify codes', () => {
   assert.ok(service.includes("await prisma.coupon.update({"));
   assert.ok(service.includes("autoEmailSentAt: new Date()"));
   assert.ok(service.includes('productDiscountLink(code, handle)'));
+  assert.ok(service.includes('coupon.shopifyProductHandles, coupon.discountValue'));
   assert.ok(service.includes('RESEND_FROM_EMAIL'));
   assert.ok(service.includes('autoEmailError'));
 });
