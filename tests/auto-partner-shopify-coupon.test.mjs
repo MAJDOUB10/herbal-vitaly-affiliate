@@ -19,7 +19,7 @@ test('only verified active affiliate profiles may receive automatic coupons', ()
   assert.ok(service.includes('const chosenCode = requestedCode.trim().toUpperCase()'));
   assert.ok(service.includes('settings.sendEmail'));
   assert.ok(service.includes('getAutoCouponSettings()'));
-  assert.ok(service.includes('/^[A-Z0-9]{3}$/.test(chosenCode)'));
+  assert.ok(service.includes('validateDiscountCode(chosenCode)'));
 });
 
 test('Shopify writes must be reserved and product-scoped before a notification', () => {
