@@ -53,10 +53,19 @@ export async function verifyGoogleIdToken(idToken: string, nonce: string) {
     throw Error('Google identity could not be verified');
   const name = typeof payload.name === 'string' && payload.name.trim().length >= 2
     ? payload.name.trim().slice(0, 100) : email.split('@')[0].slice(0, 100);
-  return { sub: payload.sub, email, name };
+  // Google is authoritative for Gmail addresses and for Google Workspace
+  // domains proven by the signed hd claim. Other external emails may have
+  // changed owner since Google's original email verification.
+  const hostedDomain = typeof payload.hd === 'string' ? payload.hd.toLowerCase() : '';
+  const authoritativeEmail = email.endsWith('@gmail.com') ||
+    email.endsWith('@googlemail.com') ||
+    (Boolean(hostedDomain) && email.endsWith('@' + hostedDomain));
+  return { sub: payload.sub, email, name, authoritativeEmail };
 }
 
-export async function resolveGoogleAffiliate(identity: { sub: string; email: string; name: string }) {
+export async function resolveGoogleAffiliate(identity: {
+  sub: string; email: string; name: string; authoritativeEmail: boolean;
+}) {
   // Google subject is stable even if an account later changes its email.
   const linked = await prisma.user.findUnique({ where: { googleSub: identity.sub },
     include: { affiliate: true } });
@@ -73,6 +82,7 @@ export async function resolveGoogleAffiliate(identity: { sub: string; email: str
   if (existing) {
     if (existing.role !== 'AFFILIATE' || existing.status !== 'ACTIVE' ||
         !existing.emailVerifiedAt || !existing.affiliate ||
+        !identity.authoritativeEmail ||
         (existing.googleSub && existing.googleSub !== identity.sub))
       throw Error('An account already exists and cannot be linked automatically');
     const update = await prisma.user.updateMany({
