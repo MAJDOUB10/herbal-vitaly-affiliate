@@ -53,6 +53,7 @@ import {
   FileText,
   UsersRound,
   Clapperboard,
+  Headphones,
   Layers,
 } from 'lucide-react';
 
@@ -68,6 +69,7 @@ const mainNavItems = [
   { title: 'COD Reconciliation', url: '/admin/cod', icon: Truck },
   { title: 'Invoices', url: '/admin/invoices', icon: FileText },
   { title: 'Emails', url: '/admin/emails', icon: Mail },
+  { title: 'Support', url: '/admin/support', icon: Headphones },
 ];
 
 const marketingNavItems = [

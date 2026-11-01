@@ -23,6 +23,8 @@ model User {
   auditLogs      AuditLog[]
   commissions    Commission[]
   payouts        Payout[]
+  supportTickets SupportTicket[]
+  supportMessages SupportMessage[]
 
   @@map("users")
 }
@@ -545,6 +547,41 @@ enum ReportFrequency {
 // ───────────────────────────────────────────────
 // Coupon / Double-sided Rewards
 // ───────────────────────────────────────────────
+
+// Partner-to-admin support desk. Customer order references are optional text,
+// never an automatic mutation of order, commission or payout records.
+model SupportTicket {
+  id           String           @id @default(cuid())
+  userId       String           @map("user_id")
+  subject      String
+  category     String           @default("GENERAL")
+  status       String           @default("OPEN")
+  priority     String           @default("NORMAL")
+  orderRef     String?          @map("order_ref")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  lastMessageAt DateTime        @default(now()) @map("last_message_at")
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages     SupportMessage[]
+
+  @@index([userId, lastMessageAt])
+  @@index([status, lastMessageAt])
+  @@map("support_tickets")
+}
+
+model SupportMessage {
+  id          String        @id @default(cuid())
+  ticketId    String        @map("ticket_id")
+  authorId    String        @map("author_id")
+  body        String
+  internal    Boolean       @default(false)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@map("support_messages")
+}
 
 model AutoCouponSettings {
   id              String   @id @default("default")
