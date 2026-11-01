@@ -1,7 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { createRemoteJWKSet, jwtVerify, SignJWT } from 'jose';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
 import { passwordSessionVersion, isValidLoginEmail, normalizeLoginEmail } from '@/lib/password-auth-policy';
 import * as bcrypt from 'bcryptjs';
 
