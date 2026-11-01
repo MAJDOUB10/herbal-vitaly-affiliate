@@ -97,7 +97,7 @@ export default function RegisterPage() {
 
       if (res.ok && data.success) {
         setStep('success');
-        setMessage(data.message || 'Your email is verified. You can sign in when approved.');
+        setMessage(data.message || 'Your email is verified. You can sign in now.');
       } else {
         setError(data.error || 'Invalid verification code');
       }
@@ -316,7 +316,7 @@ export default function RegisterPage() {
                 <div>
                   <h3 className="text-lg font-semibold">Welcome aboard, {name}!</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {message || 'Your email is verified. Your application awaits administrator approval.'}
+                    {message || 'Your email is verified. You can sign in now.'}
                   </p>
                 </div>
                 <Link href="/login" className="inline-block rounded-md bg-primary px-5 py-2 text-sm font-semibold text-white hover:opacity-90">Go to sign in</Link>
