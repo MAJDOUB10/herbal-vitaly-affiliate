@@ -10,6 +10,7 @@ datasource db {
 model User {
   id             String       @id @default(cuid())
   email          String       @unique
+  googleSub      String?      @unique @map("google_sub")
   name           String
   password       String
   role           Role         @default(AFFILIATE)
