@@ -29,12 +29,12 @@ test('only Admin may modify code generation; products are checked in Shopify', (
   assert.ok(policy.includes("v.productHandles.length < 1"));
 });
 
-test('settings apply only to future Shopify discounts; existing automatic codes survive changed prefix', () => {
+test('settings apply only to future Shopify discounts; existing automatically issued codes survive format changes', () => {
   assert.ok(service.includes("description: 'Automatic OTP-verified affiliate onboarding'"));
-  assert.ok(service.includes("const code = coupon?.code || automaticPartnerCode("));
+  assert.ok(service.includes("const code = coupon.code;"));
   assert.ok(service.includes("settings.discountPercent"));
   assert.ok(service.includes("settings.productHandles"));
-  assert.ok(service.includes("settings.prefix"));
+  assert.ok(service.includes('automaticShortCouponCode(affiliateId, attempt, secret)'));
   assert.ok(service.includes('coupon.discountValue'));
   assert.ok(service.includes('coupon.shopifyProductHandles'));
   assert.ok(service.includes('settings.sendEmail'));
@@ -46,8 +46,8 @@ test('settings apply only to future Shopify discounts; existing automatic codes 
   }
 });
 
-test('admin coupons dashboard has settings switch, prefix, percent, product picker and save', () => {
-  for(const term of ['Automatic partner promo codes','auto-coupon-enabled','auto-coupon-prefix',
+test('admin coupons dashboard has settings switch, 3-character format, percent, products and save', () => {
+  for(const term of ['Automatic partner promo codes','auto-coupon-enabled','3 characters — automatic',
     'auto-coupon-percent','auto-coupon-email','autoPolicy.productHandles.includes(p.handle)',
     'Save automatic generation rules','/api/admin/coupons/auto-settings']) {
     assert.ok(dashboard.includes(term), term);

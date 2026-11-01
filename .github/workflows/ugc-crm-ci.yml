@@ -24,6 +24,9 @@ on:
       - 'src/app/api/affiliate/shopify-coupons/**'
       - 'src/lib/hv-shopify-discounts.ts'
       - 'tests/affiliate-landing-code-ref.test.mjs'
+      - 'src/lib/short-partner-code.ts'
+      - 'src/app/api/admin/coupons/route.ts'
+      - 'tests/three-character-affiliate-codes.test.mjs'
       - '.github/workflows/ugc-crm-ci.yml'
   push:
     branches:
@@ -51,6 +54,9 @@ on:
       - 'src/app/api/affiliate/shopify-coupons/**'
       - 'src/lib/hv-shopify-discounts.ts'
       - 'tests/affiliate-landing-code-ref.test.mjs'
+      - 'src/lib/short-partner-code.ts'
+      - 'src/app/api/admin/coupons/route.ts'
+      - 'tests/three-character-affiliate-codes.test.mjs'
       - '.github/workflows/ugc-crm-ci.yml'
 jobs:
   verify:

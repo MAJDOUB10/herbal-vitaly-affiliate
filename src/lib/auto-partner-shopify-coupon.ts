@@ -6,21 +6,13 @@
 import { prisma } from '@/lib/prisma';
 import { Resend } from 'resend';
 import { getAutoCouponSettings } from '@/lib/auto-coupon-settings';
+import { automaticShortCouponCode } from '@/lib/short-partner-code';
 import {
   buildBasicDiscountInput, createShopifyDiscount, getShopifyDiscountByCode,
   getShopifyProducts, trackedAffiliateLandingLink, validateDiscountCode,
 } from '@/lib/hv-shopify-discounts';
 
 const RETRY_LEASE_MS = 5 * 60_000;
-
-export function automaticPartnerCode(referralCode: string, affiliateId: string, prefix = 'HV'): string {
-  const fromReferral = prefix + referralCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const fallback = prefix + affiliateId.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const code = fromReferral.length <= 40 ? fromReferral : fallback.slice(0, 40);
-  const validated = validateDiscountCode(code);
-  if (!validated) throw new Error('Unable to derive an affiliate discount reference');
-  return validated;
-}
 
 export function eligiblePartnerCoupon(input: {
   role: string; status: string; emailVerifiedAt: Date | null; hasAffiliate: boolean;
@@ -111,8 +103,8 @@ export async function provisionAffiliateShopifyCoupon(userId: string): Promise<v
   const settings = await getAutoCouponSettings();
   if (!settings.enabled) return;
   const affiliateId = user.affiliate.id;
-  // Reuse an existing automatic coupon even if the admin has changed prefix or rate.
-  // This prevents retries from creating a second Shopify code for the same partner.
+  // Existing coupons keep their original long codes. Only new onboarding
+  // coupons use a 3-character code; never rename an issued Shopify discount.
   let coupon = await prisma.coupon.findFirst({
     where: { affiliateId, description: 'Automatic OTP-verified affiliate onboarding' },
     orderBy: { createdAt: 'asc' },
@@ -124,38 +116,54 @@ export async function provisionAffiliateShopifyCoupon(userId: string): Promise<v
     });
     if (activeAssigned) return;
   }
-  const code = coupon?.code || automaticPartnerCode(user.affiliate.referralCode, affiliateId, settings.prefix);
-  if (!coupon) {
-    coupon = await prisma.coupon.findUnique({ where: { code } });
-    if (coupon && coupon.affiliateId !== affiliateId)
-      throw new Error('Affiliate discount code collision');
-  }
 
   if (!coupon) {
+    const secret = process.env.HV_ATTRIBUTION_SECRET || process.env.JWT_SECRET;
+    if (!secret) throw new Error('Short code signing key is missing');
+
     const products = await getShopifyProducts();
     const chosen = settings.productHandles.map(handle => products.find(p => p.handle === handle));
     if (chosen.some(p => !p))
       throw new Error('Required active Shopify products are not available');
-    // Fail closed if an external discount owns this code.
-    if (await getShopifyDiscountByCode(code))
-      throw new Error('Affiliate code already exists in Shopify');
-    try {
-      coupon = await prisma.coupon.create({
-        data: {
-          code, affiliateId, createdBy: user.id, description: 'Automatic OTP-verified affiliate onboarding',
-          discountType: 'PERCENTAGE', discountValue: settings.discountPercent, currency: 'EGP',
-          shopifyProductIds: chosen.map(p => p!.id),
-          shopifyProductHandles: [...settings.productHandles],
-          source: 'REFFERQ_PENDING', shopifyStatus: 'PENDING',
-          isActive: false, startsAt: new Date(Date.now() - 60_000),
-        },
-      });
-    } catch (e) {
-      // Concurrent login and OTP callbacks can race to reserve the same code.
-      coupon = await prisma.coupon.findUnique({ where: { code } });
-      if (!coupon || coupon.affiliateId !== affiliateId) throw e;
+
+    // Deterministic, HMAC-based candidates ensure concurrent OTP/sign-in
+    // retries compete for the same codes. Reserve in Neon before Shopify writes.
+    for (let attempt = 0; attempt < 96; attempt++) {
+      const candidate = automaticShortCouponCode(affiliateId, attempt, secret);
+      if (!validateDiscountCode(candidate)) throw new Error('Invalid short Shopify coupon');
+      if (await prisma.coupon.findUnique({ where: { code: candidate }, select: { id: true } }))
+        continue;
+      if (await getShopifyDiscountByCode(candidate)) continue;
+
+      try {
+        coupon = await prisma.coupon.create({
+          data: {
+            code: candidate, affiliateId, createdBy: user.id,
+            description: 'Automatic OTP-verified affiliate onboarding',
+            discountType: 'PERCENTAGE', discountValue: settings.discountPercent, currency: 'EGP',
+            shopifyProductIds: chosen.map(p => p!.id),
+            shopifyProductHandles: [...settings.productHandles],
+            source: 'REFFERQ_PENDING', shopifyStatus: 'PENDING',
+            isActive: false, startsAt: new Date(Date.now() - 60_000),
+          },
+        });
+        break;
+      } catch (error) {
+        // Partial unique index on affiliate_id prevents multiple automatic
+        // codes for one partner, even if two parallel requests pick different codes.
+        const reserved = await prisma.coupon.findFirst({
+          where: { affiliateId, description: 'Automatic OTP-verified affiliate onboarding' },
+          orderBy: { createdAt: 'asc' },
+        });
+        if (reserved) { coupon = reserved; break; }
+        if (error && typeof error === 'object' && 'code' in error &&
+            error.code === 'P2002') continue;
+        throw error;
+      }
     }
+    if (!coupon) throw new Error('No available 3-character Shopify promo code');
   }
+  const code = coupon.code;
 
   if (coupon.source === 'REFFERQ_PENDING') {
     // Claim with an atomic lease; a second invocation cannot create a duplicate.

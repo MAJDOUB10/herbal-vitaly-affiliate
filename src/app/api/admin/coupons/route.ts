@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { randomBytes } from 'node:crypto';
+import { randomShortCouponCode } from '@/lib/short-partner-code';
 import { buildBasicDiscountInput, createShopifyDiscount, getShopifyDiscountByCode, getShopifyProducts, getShopifyCouponTargets, validateDiscountCode, validateProductIds } from '@/lib/hv-shopify-discounts';
 
 async function verifyAdmin(request: NextRequest) {
@@ -79,11 +79,20 @@ export async function POST(request: NextRequest) {
     const discountType = body.discountType;
     const discountValue = Number(body.discountValue);
     const maxUses = body.maxUses == null || body.maxUses === '' ? null : Number(body.maxUses);
-    const code = validateDiscountCode(body.code) || (
-      body.code == null || body.code === ''
-        ? 'HV' + randomBytes(6).toString('hex').toUpperCase()
-        : null
-    );
+    const manuallySpecifiedCode = body.code != null && body.code !== '';
+    let code = validateDiscountCode(body.code);
+    if (!manuallySpecifiedCode) {
+      // A blank code field generates a short 3-character Shopify coupon.
+      // Check both systems and retry if another discount already owns it.
+      for (let attempt = 0; attempt < 96; attempt++) {
+        const candidate = randomShortCouponCode();
+        if (await prisma.coupon.findUnique({ where: { code: candidate }, select: { id: true } }))
+          continue;
+        if (await getShopifyDiscountByCode(candidate)) continue;
+        code = candidate;
+        break;
+      }
+    }
     if (!code || !productIds || !affiliateId ||
         !['PERCENTAGE','FIXED'].includes(String(discountType)) ||
         !Number.isFinite(discountValue) || discountValue <= 0 ||
