@@ -12,6 +12,13 @@ export function canApproveAffiliate(role: string, verifiedAt: Date | string | nu
   return role === 'AFFILIATE' && Boolean(verifiedAt && !Number.isNaN(new Date(verifiedAt).valueOf()));
 }
 
+/** Only a pending affiliate with an existing profile may activate after a valid OTP. */
+export function canAutoActivateAffiliate(input: {
+  role: string; status: string; hasAffiliateProfile: boolean;
+}): boolean {
+  return input.role === 'AFFILIATE' && input.status === 'PENDING' && input.hasAffiliateProfile;
+}
+
 /**
  * A first administrator can request an OTP only when Preview onboarding
  * has been explicitly enabled, there are no administrators yet, and the
