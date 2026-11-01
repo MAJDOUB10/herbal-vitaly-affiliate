@@ -16,7 +16,7 @@ test('only verified active affiliate profiles may receive automatic coupons', ()
   assert.ok(service.includes("process.env.HV_ENABLE_SHOPIFY_DISCOUNT_WRITES !== 'true'"));
   assert.ok(service.includes('settings.discountPercent'));
   assert.ok(service.includes('settings.productHandles'));
-  assert.ok(service.includes('settings.prefix'));
+  assert.ok(service.includes('automaticShortCouponCode(affiliateId, attempt, secret)'));
   assert.ok(service.includes('settings.sendEmail'));
   assert.ok(service.includes('getAutoCouponSettings()'));
   assert.ok(service.includes('validateDiscountCode(code)'));
