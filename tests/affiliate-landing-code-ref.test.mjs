@@ -38,14 +38,14 @@ test('redirect validates ownership, product eligibility and uses promo as COD re
   assert.ok(redirect.includes("redirectUrl.searchParams.set('hv_ref', referralCode)"));
   assert.ok(redirect.includes("redirectUrl.searchParams.set('hv_token', hvToken)"));
   assert.ok(redirect.includes("redirectUrl.pathname.startsWith('/products/')"));
-  assert.ok(redirect.includes("'/discount/' + encodeURIComponent(coupon.code)"));
+  assert.ok(redirect.includes("'https://herbalvitaly.com/discount/' + encodeURIComponent(coupon.code)"));
   assert.ok(!redirect.includes("redirectUrl.searchParams.set('ref', promo)"));
 });
 
 test('partner dashboard, welcome emails and admin copy use dynamic affiliate pages', () => {
   assert.ok(partner.includes('trackedAffiliateLandingLink(user.affiliate!.referralCode, c.code, p.handle)'));
   assert.ok(email.includes('trackedAffiliateLandingLink(referralCode, code, handle)'));
-  assert.ok(admin.includes("'/pages/' + p.handle + '-affiliate?ref='"));
+  assert.ok(admin.includes("'https://herbalvitaly.com/pages/' + p.handle + '-affiliate?ref='"));
   assert.ok(!partner.includes('TEST15'));
   assert.ok(!email.includes('TEST15'));
 });
