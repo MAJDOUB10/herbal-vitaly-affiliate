@@ -1,6 +1,6 @@
 import { prisma } from './prisma';
 import { randomInt, timingSafeEqual } from 'node:crypto';
-import { normalizeAffiliateEmail, hashOtp } from './affiliate-auth-policy';
+import { normalizeAffiliateEmail, hashOtp, canAutoActivateAffiliate } from './affiliate-auth-policy';
 import { Resend } from 'resend';
 
 const CODE_LIFETIME_MS = 10 * 60 * 1000;
@@ -106,11 +106,21 @@ export class OTPService {
           return { success: false, message: 'Unable to activate administrator' };
         return { success: true, message: 'Administrator email verified', user: approved };
       }
-      await prisma.user.updateMany({
+      // A valid one-time code has already been consumed above. Only an
+      // existing pending AFFILIATE profile may receive automatic access.
+      // This never changes ADMIN roles, commissions, payout approvals or COD.
+      if (!canAutoActivateAffiliate({
+        role: user.role, status: user.status, hasAffiliateProfile: Boolean(user.affiliate),
+      })) return { success: false, message: 'Affiliate account unavailable' };
+      const activated = await prisma.user.updateMany({
         where: { id: user.id, emailVerifiedAt: null, status: 'PENDING', role: 'AFFILIATE' },
-        data: { emailVerifiedAt: new Date() },
+        data: { emailVerifiedAt: new Date(), status: 'ACTIVE' },
       });
-      return { success: true, message: 'Email verified. Your application awaits administrator approval.', pendingApproval: true };
+      if (activated.count !== 1) return { success: false, message: 'Unable to activate affiliate' };
+      const verified = await prisma.user.findUnique({ where: { id: user.id }, include: { affiliate: true } });
+      if (!verified || verified.status !== 'ACTIVE' || !verified.emailVerifiedAt)
+        return { success: false, message: 'Unable to activate affiliate' };
+      return { success: true, message: 'Email verified. Your partner account is active. You can sign in.', user: verified, pendingApproval: false };
     }
     return { success: true, message: 'Verification successful', user };
   }
