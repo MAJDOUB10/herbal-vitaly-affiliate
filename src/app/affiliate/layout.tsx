@@ -40,6 +40,7 @@ import {
   Users,
   Wallet,
   BookOpen,
+  Headphones,
   BarChart3,
   Settings,
   LogOut,
@@ -58,6 +59,7 @@ const mainNavItems = [
   { title: 'Returns', url: '/affiliate#return-reasons', icon: RotateCcw },
   { title: 'Payouts', url: '/affiliate/payouts', icon: Wallet },
   { title: 'Resources', url: '/affiliate/resources', icon: BookOpen },
+  { title: 'Support', url: '/affiliate/support', icon: Headphones },
   { title: 'Reports', url: '/affiliate/reports', icon: BarChart3, badge: 'BETA' },
 ];
 
