@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { validateDiscountCode, getShopifyCouponTargets, getShopifyProducts } from '@/lib/hv-shopify-discounts';
+import { validateDiscountCode, getShopifyCouponTargets, getShopifyProducts, trackedAffiliateLandingLink } from '@/lib/hv-shopify-discounts';
 
 /** Read-only approved partner discounts, scoped to the authenticated account. */
 export async function GET(request: NextRequest) {
@@ -40,10 +40,12 @@ export async function GET(request: NextRequest) {
         discountValue: c.discountValue, scope: target.scope,
         products: productList.map(p => ({
           handle: p.handle, title: p.title, productUrl: p.url,
-          affiliateLink: 'https://partner.herbalvitaly.com/r/' +
-            encodeURIComponent(user.affiliate!.referralCode) +
-            '?dest=' + encodeURIComponent(p.url) +
-            '&promo=' + encodeURIComponent(c.code),
+          affiliateLink: ['tiynefret', 'ushabti'].includes(p.handle)
+            ? trackedAffiliateLandingLink(user.affiliate!.referralCode, c.code, p.handle)
+            : 'https://partner.herbalvitaly.com/r/' +
+                encodeURIComponent(user.affiliate!.referralCode) +
+                '?dest=' + encodeURIComponent(p.url) +
+                '&promo=' + encodeURIComponent(c.code),
         })),
       }];
     });

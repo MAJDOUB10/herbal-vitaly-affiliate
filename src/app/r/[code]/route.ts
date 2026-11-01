@@ -124,14 +124,23 @@ export async function GET(
     if (!redirectUrl.searchParams.has('utm_medium')) redirectUrl.searchParams.set('utm_medium', 'partner');
     if (!redirectUrl.searchParams.has('utm_campaign')) redirectUrl.searchParams.set('utm_campaign', 'affiliate');
 
+    // On /pages/tiynefret-affiliate and /pages/ushabti-affiliate, Shopify's
+    // COD form expects ?ref=<Shopify discount code>, NOT the partner
+    // referral ID. Keep signed attribution separately in hv_ref / hv_token.
+    // Discount verification below is required before assigning ?ref=promo.
+    const landingMatch = redirectUrl.pathname.match(/^\/pages\/(tiynefret|ushabti)-affiliate\/?$/);
+    if (landingMatch) redirectUrl.searchParams.delete('ref');
+
     // Promo links can only apply an ACTIVE Shopify discount assigned to this
-    // exact partner and the selected Shopify product. All signed tracking
-    // parameters are embedded in Shopify's redirect destination, so the product
-    // page receives them after Shopify applies the discount.
+    // exact partner and the selected Shopify product. The selected page and
+    // discount scope are independently verified against the live Shopify API.
     let finalTarget = redirectUrl.toString();
-    if (promo && validateDiscountCode(promo) && redirectUrl.pathname.startsWith('/products/') &&
+    if (promo && validateDiscountCode(promo) &&
+        (landingMatch || redirectUrl.pathname.startsWith('/products/')) &&
         affiliate.user.role === 'AFFILIATE' && affiliate.user.emailVerifiedAt) {
-      const handle = decodeURIComponent(redirectUrl.pathname.slice('/products/'.length));
+      const handle = landingMatch
+        ? landingMatch[1]
+        : decodeURIComponent(redirectUrl.pathname.slice('/products/'.length));
       const coupon = await prisma.coupon.findFirst({
         where: { code: promo, affiliateId: affiliate.id, source: 'SHOPIFY',
           isActive: true, shopifyStatus: 'ACTIVE',
@@ -150,9 +159,17 @@ export async function GET(
               ? (await getShopifyProducts()).some(p => p.handle === handle)
               : false;
           if (live?.status === 'ACTIVE' && validProduct) {
-            const productPathWithSignedTracking = redirectUrl.pathname + redirectUrl.search;
-            finalTarget = 'https://herbalvitaly.com/discount/' + encodeURIComponent(coupon.code) +
-              '?redirect=' + encodeURIComponent(productPathWithSignedTracking);
+            if (landingMatch) {
+              // App Proxy COD quote and order verify the same active Shopify code.
+              // Do not embed partner referral code in the discount parameter.
+              redirectUrl.searchParams.set('ref', coupon.code);
+              finalTarget = redirectUrl.toString();
+            } else {
+              // Standard Shopify product links still apply the code in cart.
+              const productPathWithSignedTracking = redirectUrl.pathname + redirectUrl.search;
+              finalTarget = 'https://herbalvitaly.com/discount/' + encodeURIComponent(coupon.code) +
+                '?redirect=' + encodeURIComponent(productPathWithSignedTracking);
+            }
           }
         } catch {
           // Still redirect to the eligible store URL with signed referral

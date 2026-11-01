@@ -488,8 +488,10 @@ export default function CouponsPage() {
                                   <Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs"
                                     title={'Copy Shopify product promo link for ' + c.code}
                                     onClick={() => copyCode(
-                                      'https://herbalvitaly.com/discount/' + encodeURIComponent(c.code) +
-                                      '?redirect=' + encodeURIComponent('/products/' + p.handle)
+                                      ['tiynefret', 'ushabti'].includes(p.handle)
+                                        ? 'https://herbalvitaly.com/pages/' + p.handle + '-affiliate?ref=' + encodeURIComponent(c.code)
+                                        : 'https://herbalvitaly.com/discount/' + encodeURIComponent(c.code) +
+                                          '?redirect=' + encodeURIComponent('/products/' + p.handle)
                                     )}>
                                     <Link2 className="h-3 w-3" /> Copy promo link
                                   </Button>
