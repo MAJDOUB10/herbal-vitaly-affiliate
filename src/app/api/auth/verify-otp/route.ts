@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       pendingApproval: Boolean(result.pendingApproval),
       message: result.pendingApproval
         ? 'Email verified. Await administrator approval before signing in.'
-        : 'Email verified. Sign in and choose your personal 3-character promo code.',
+        : 'Email verified. Sign in and choose your personal promo code.',
     }, { headers: { 'Cache-Control': 'no-store' } });
   } catch {
     return NextResponse.json({ success: false, error: 'Verification failed' }, { status: 500 });
