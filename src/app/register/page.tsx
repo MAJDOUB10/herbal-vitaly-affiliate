@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { BrandIdentity } from '@/components/brand/BrandIdentity';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -251,6 +252,7 @@ export default function RegisterPage() {
                   </Button>
                 </CardFooter>
               </form>
+              <CardContent className="pt-4"><GoogleSignInButton label="Sign up with Google" /></CardContent>
             </>
           )}
 
