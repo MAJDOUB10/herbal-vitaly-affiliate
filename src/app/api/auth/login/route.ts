@@ -46,9 +46,12 @@ export async function POST(request: NextRequest) {
     await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } });
     // Prompt partner choice only when no Shopify code is already assigned
     // or reserved. Existing affiliates continue to their normal dashboard.
-    const needsPromoCode = user.role === 'AFFILIATE' &&
+    const affiliateProfile = user.role === 'AFFILIATE'
+      ? await prisma.affiliate.findUnique({ where: { userId: user.id }, select: { id: true } })
+      : null;
+    const needsPromoCode = Boolean(affiliateProfile) &&
       !(await prisma.coupon.findFirst({
-        where: { affiliate: { userId: user.id },
+        where: { affiliateId: affiliateProfile!.id,
           OR: [{ source: 'SHOPIFY', isActive: true },
                { description: 'Automatic OTP-verified affiliate onboarding' }] },
         select: { id: true },
