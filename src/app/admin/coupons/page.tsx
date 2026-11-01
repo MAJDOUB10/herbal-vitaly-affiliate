@@ -345,7 +345,7 @@ export default function CouponsPage() {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Codes generated automatically when Admin leaves the code field blank use 3 characters.
-                    Partners choosing their own promo code can use 3–40 characters. Duplicate codes are checked in Shopify and Refferq.
+                    No prefix. Partners choosing their own promo code can use 3–40 characters. Duplicate codes are checked in Shopify and Refferq.
                   </p>
                 </div>
                 <div className="space-y-2">
