@@ -8,7 +8,7 @@ import { Resend } from 'resend';
 import { getAutoCouponSettings } from '@/lib/auto-coupon-settings';
 import {
   buildBasicDiscountInput, createShopifyDiscount, getShopifyDiscountByCode,
-  getShopifyProducts, productDiscountLink, validateDiscountCode,
+  getShopifyProducts, trackedAffiliateLandingLink, validateDiscountCode,
 } from '@/lib/hv-shopify-discounts';
 
 const RETRY_LEASE_MS = 5 * 60_000;
@@ -35,7 +35,7 @@ function safeHtml(s: string): string {
   }[x] || x));
 }
 
-async function sendCouponEmail(couponId: string, email: string, name: string, code: string, productHandles: string[], discountPercent: number) {
+async function sendCouponEmail(couponId: string, email: string, name: string, referralCode: string, code: string, productHandles: string[], discountPercent: number) {
   const leaseAt = new Date();
   const claimed = await prisma.coupon.updateMany({
     where: {
@@ -54,7 +54,9 @@ async function sendCouponEmail(couponId: string, email: string, name: string, co
       throw new Error('Partner email service is not configured');
     const links = productHandles.map(handle => ({
       label: handle.toUpperCase(),
-      url: productDiscountLink(code, handle),
+      url: ['tiynefret', 'ushabti'].includes(handle)
+        ? trackedAffiliateLandingLink(referralCode, code, handle)
+        : 'https://herbalvitaly.com/discount/' + encodeURIComponent(code) + '?redirect=' + encodeURIComponent('/products/' + handle),
     }));
     const productLabel = productHandles.map(h => h.toUpperCase()).join(', ');
     const html = `<div style="font-family:Arial,sans-serif;max-width:620px;margin:0 auto;padding:28px;background:#fff;color:#163b25">
@@ -208,7 +210,7 @@ export async function provisionAffiliateShopifyCoupon(userId: string): Promise<v
   }
   if (coupon.source === 'SHOPIFY' && coupon.isActive &&
       coupon.shopifyStatus === 'ACTIVE' && !coupon.autoEmailSentAt && settings.sendEmail) {
-    await sendCouponEmail(coupon.id, user.email, user.name, code,
-      coupon.shopifyProductHandles, coupon.discountValue);
+    await sendCouponEmail(coupon.id, user.email, user.name, user.affiliate.referralCode,
+      code, coupon.shopifyProductHandles, coupon.discountValue);
   }
 }
