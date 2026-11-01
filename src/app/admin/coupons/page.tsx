@@ -338,11 +338,15 @@ export default function CouponsPage() {
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="auto-coupon-prefix">Code prefix</Label>
-                  <Input id="auto-coupon-prefix" value={autoPolicy.prefix} maxLength={10}
-                    onChange={e => setAutoPolicy({ ...autoPolicy, prefix: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'') })}
-                    className="max-w-xs font-mono" placeholder="HV" />
-                  <p className="text-xs text-muted-foreground">Example: {autoPolicy.prefix || 'HV'}SARA1234 (unique per partner)</p>
+                  <Label>Automatic code format</Label>
+                  <div className="flex min-h-10 items-center gap-3 rounded-lg border bg-[#F7FAF8] px-3">
+                    <span className="font-mono text-xl font-bold tracking-[0.2em] text-[#1F6B3A]">K7M</span>
+                    <span className="text-sm font-medium">3 characters — automatic</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Three uppercase letters or digits, without confusing O/0 or I/1.
+                    No prefix. Duplicate codes are checked in Shopify and Refferq.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="auto-coupon-percent">Customer discount (%)</Label>
@@ -554,7 +558,7 @@ export default function CouponsPage() {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>Coupon Code (optional — auto-generate if empty)</Label>
-              <Input value={form.code} onChange={e => setForm({...form, code: e.target.value.toUpperCase()})} placeholder="e.g. SARA10 — or leave blank to generate" className="font-mono" />
+              <Input value={form.code} onChange={e => setForm({...form, code: e.target.value.toUpperCase()})} placeholder="e.g. K7M — or leave blank for an automatic 3-character code" className="font-mono" />
             </div>
             <div className="grid gap-2">
               <Label>Description</Label>
