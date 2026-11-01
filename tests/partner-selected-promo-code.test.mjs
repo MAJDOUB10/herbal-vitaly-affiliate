@@ -34,13 +34,13 @@ test('only logged-in, active, OTP-verified affiliates can reserve a promo code',
   assert.ok(!api.includes('prisma.payout.create'));
 });
 
-test('the affiliate chooses exactly 3 uppercase letters or digits, including initials', () => {
-  assert.ok(api.includes('/^[A-Z0-9]{3}$/.test(code)'));
-  assert.ok(service.includes('/^[A-Z0-9]{3}$/.test(chosenCode)'));
+test('the affiliate chooses a valid personal Shopify code from 3 to 40 characters', () => {
+  assert.ok(api.includes('validateDiscountCode(value)'));
+  assert.ok(service.includes('validateDiscountCode(chosenCode)'));
   assert.ok(service.includes('requestedCode.trim().toUpperCase()'));
-  assert.ok(ui.includes("replace(/[^A-Z0-9]/g, '')"));
-  assert.ok(ui.includes('maxLength={3}'));
-  assert.ok(ui.includes('for example ALI, SAM or A7M'));
+  assert.ok(ui.includes("replace(/[^A-Z0-9_-]/g, '')"));
+  assert.ok(ui.includes('minLength={3} maxLength={40}'));
+  assert.ok(ui.includes('for example SARA15, MOHAMED or ALI2026'));
   assert.ok(ui.includes('availability !== \'available\''));
 });
 
