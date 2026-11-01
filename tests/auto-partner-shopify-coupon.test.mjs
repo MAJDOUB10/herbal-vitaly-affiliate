@@ -16,16 +16,16 @@ test('only verified active affiliate profiles may receive automatic coupons', ()
   assert.ok(service.includes("process.env.HV_ENABLE_SHOPIFY_DISCOUNT_WRITES !== 'true'"));
   assert.ok(service.includes('settings.discountPercent'));
   assert.ok(service.includes('settings.productHandles'));
-  assert.ok(service.includes('automaticShortCouponCode(affiliateId, attempt, secret)'));
+  assert.ok(service.includes('const chosenCode = requestedCode.trim().toUpperCase()'));
   assert.ok(service.includes('settings.sendEmail'));
   assert.ok(service.includes('getAutoCouponSettings()'));
-  assert.ok(service.includes('validateDiscountCode(candidate)'));
+  assert.ok(service.includes('/^[A-Z0-9]{3}$/.test(chosenCode)'));
 });
 
 test('Shopify writes must be reserved and product-scoped before a notification', () => {
   assert.ok(service.includes("source: 'REFFERQ_PENDING', shopifyStatus: 'PENDING'"));
   assert.ok(service.includes("shopifyProductIds: chosen.map(p => p!.id)"));
-  assert.ok(service.includes("getShopifyDiscountByCode(code)"));
+  assert.ok(service.includes("getShopifyDiscountByCode(chosenCode)"));
   assert.ok(service.includes('await prisma.coupon.updateMany'));
   assert.ok(service.includes("shopifyStatus: 'CREATING'"));
   assert.ok(service.includes('createShopifyDiscount(buildBasicDiscountInput({'));
@@ -51,12 +51,11 @@ test('email sending is idempotent and limited to active Shopify codes', () => {
   assert.ok(service.includes('autoEmailError'));
 });
 
-test('OTP and login schedule retry without exposing a code or secrets to public routes', () => {
-  assert.ok(otp.includes("if (result.user?.role === 'AFFILIATE' && !result.pendingApproval)"));
-  assert.ok(otp.includes('after(async () => {'));
-  assert.ok(login.includes("if (user.role === 'AFFILIATE')"));
-  assert.ok(login.includes('after(async () => {'));
-  assert.ok(login.includes('provisionAffiliateShopifyCoupon(verifiedUserId)'));
+test('OTP and login never create a promo code without partner selection', () => {
+  assert.ok(!otp.includes('provisionAffiliateShopifyCoupon('));
+  assert.ok(!login.includes('provisionAffiliateShopifyCoupon('));
+  assert.ok(login.includes('needsPromoCode'));
+  assert.ok(login.includes("description: 'Automatic OTP-verified affiliate onboarding'"));
   assert.ok(!otp.includes('SHOPIFY_CLIENT_SECRET'));
   assert.ok(!login.includes('SHOPIFY_CLIENT_SECRET'));
 });
