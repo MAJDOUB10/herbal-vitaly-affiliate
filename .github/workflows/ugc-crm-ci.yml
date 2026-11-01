@@ -1,4 +1,4 @@
-name: Partner CRM validation
+name: Partner CRM and affiliate authentication validation
 on:
   pull_request:
     paths:
@@ -8,6 +8,11 @@ on:
       - 'src/app/admin/layout.tsx'
       - 'prisma/**'
       - 'tests/hv-ugc-crm.test.mjs'
+      - 'src/lib/otp.ts'
+      - 'src/lib/affiliate-auth-policy.ts'
+      - 'src/app/register/page.tsx'
+      - 'src/app/api/auth/**'
+      - 'tests/affiliate-auth-security.test.mjs'
       - '.github/workflows/ugc-crm-ci.yml'
   push:
     branches:
@@ -19,6 +24,11 @@ on:
       - 'src/app/admin/layout.tsx'
       - 'prisma/**'
       - 'tests/hv-ugc-crm.test.mjs'
+      - 'src/lib/otp.ts'
+      - 'src/lib/affiliate-auth-policy.ts'
+      - 'src/app/register/page.tsx'
+      - 'src/app/api/auth/**'
+      - 'tests/affiliate-auth-security.test.mjs'
       - '.github/workflows/ugc-crm-ci.yml'
 jobs:
   verify:
