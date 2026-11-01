@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { validateDiscountCode } from '../src/lib/hv-shopify-discounts.ts';
 const read = p => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const api = read('src/app/api/affiliate/promo-code/route.ts');
 const service = read('src/lib/auto-partner-shopify-coupon.ts');
@@ -42,6 +43,20 @@ test('the affiliate chooses a valid personal Shopify code from 3 to 40 character
   assert.ok(ui.includes('minLength={3} maxLength={40}'));
   assert.ok(ui.includes('for example SARA15, MOHAMED or ALI2026'));
   assert.ok(ui.includes('availability !== \'available\''));
+});
+
+test('Shopify and Refferq share a 3–40 character format, with no fixed length of 3', () => {
+  for (const code of ['ALI', 'SARA15', 'MOHAMED', 'MOHAMED2026', 'ALI_2026', 'SARA-20', 'A'.repeat(40)]) {
+    assert.equal(validateDiscountCode(code), code);
+  }
+  assert.equal(validateDiscountCode('sara15'), 'SARA15');
+  for (const invalid of ['AB', 'A'.repeat(41), '-ABC', '_ABC', 'A B', 'A/BC', '', '🔥']) {
+    assert.equal(validateDiscountCode(invalid), null);
+  }
+  assert.ok(ui.includes('maxLength={40}'));
+  assert.ok(ui.includes('preferredCodeValid'));
+  assert.ok(api.includes('validateDiscountCode(value)'));
+  assert.ok(service.includes('validateDiscountCode(chosenCode)'));
 });
 
 test('availability is checked against Shopify and Neon without exposing other partners', () => {
