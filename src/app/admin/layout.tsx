@@ -55,10 +55,12 @@ import {
   Clapperboard,
   Headphones,
   Layers,
+  Landmark,
 } from 'lucide-react';
 
 const mainNavItems = [
   { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
+  { title: 'Finance & Accounting', url: '/admin/finance', icon: Landmark },
   { title: 'Partners', url: '/admin/partners', icon: Users },
   { title: 'Partner CRM / UGC', url: '/admin/ugc-crm', icon: Clapperboard },
   { title: 'Customers', url: '/admin/customers', icon: UserCheck },
