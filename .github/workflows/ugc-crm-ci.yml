@@ -43,6 +43,12 @@ on:
       - 'src/components/auth/GoogleSignInButton.tsx'
       - 'tests/google-sign-in-security.test.mjs'
       - 'docs/google-sign-in-setup.md'
+      - 'src/app/page.tsx'
+      - 'src/app/globals.css'
+      - 'src/app/privacy/**'
+      - 'src/app/terms/**'
+      - 'src/components/landing/**'
+      - 'tests/public-affiliate-landing.test.mjs'
       - '.github/workflows/ugc-crm-ci.yml'
   push:
     branches:
@@ -89,6 +95,12 @@ on:
       - 'src/components/auth/GoogleSignInButton.tsx'
       - 'tests/google-sign-in-security.test.mjs'
       - 'docs/google-sign-in-setup.md'
+      - 'src/app/page.tsx'
+      - 'src/app/globals.css'
+      - 'src/app/privacy/**'
+      - 'src/app/terms/**'
+      - 'src/components/landing/**'
+      - 'tests/public-affiliate-landing.test.mjs'
       - '.github/workflows/ugc-crm-ci.yml'
 jobs:
   verify:
