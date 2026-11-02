@@ -167,7 +167,7 @@ export default function FinanceAccountingPage() {
                 <item.icon className="h-5 w-5 text-[#1F6B3A]" />
                 <span className={'rounded-full px-2 py-1 text-[11px] font-medium ' +
                   (item.ready ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-600')}>
-                  {item.ready ? 'Operational data' : 'Not yet live'}
+                  {item.ready ? 'Operational data' : item.href ? 'Native staging' : 'Not yet live'}
                 </span>
               </div>
               <h3 className="mt-3 text-sm font-semibold text-[#173621]">{item.name}</h3>
