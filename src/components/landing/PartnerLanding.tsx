@@ -241,7 +241,7 @@ export default function PartnerLanding() {
                 <div className="grid gap-3 sm:grid-cols-[1.25fr_0.75fr]">
                   <div className="rounded-2xl bg-gradient-to-br from-[#1F6B3A] to-[#133D25] p-5 text-white">
                     <div className="flex items-center justify-between gap-2 text-xs text-white/80"><span>{t.previewCode}</span><TicketPercent className="h-5 w-5"/></div>
-                    <p className="mt-4 font-mono text-3xl font-bold tracking-[0.18em]">SARA15</p>
+                    <p className="mt-4 font-mono text-3xl font-bold tracking-[0.18em]">YOURCODE</p>
                     <p className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-medium text-white/90"><BadgeCheck className="h-3.5 w-3.5"/>{t.previewSample}</p>
                   </div>
                   <div className="flex flex-col justify-center gap-3 rounded-2xl border border-[#E3EEE7] bg-[#F8FBF9] p-4">
@@ -282,7 +282,7 @@ export default function PartnerLanding() {
             {t.features.map((feature,i) => {
               const Icon = featureIcons[i];
               return <div key={feature.title} className="group rounded-[1.4rem] border border-[#E0EBE4] bg-white p-7 shadow-[0_12px_28px_rgba(20,80,40,0.035)] transition-all hover:-translate-y-1 hover:border-[#BFDAC7] hover:shadow-[0_20px_40px_rgba(20,80,40,0.09)]">
-                <span className="mb-6 inline-flex h-13 w-13 items-center justify-center rounded-2xl bg-[#EDF8F0] p-3.5 text-[#1F6B3A]"><Icon className="h-6 w-6"/></span>
+                <span className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EDF8F0] p-3.5 text-[#1F6B3A]"><Icon className="h-6 w-6"/></span>
                 <h3 className="text-lg font-bold text-[#173321]">{feature.title}</h3>
                 <p className="mt-3 text-sm leading-8 text-[#687E6E]">{feature.description}</p>
               </div>;
