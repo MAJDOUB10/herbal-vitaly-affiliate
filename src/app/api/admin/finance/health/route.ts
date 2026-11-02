@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
       journalsCount: journals,
       periodsCount: periods,
       postingEnabled: false,
+      draftEditingEnabled: process.env.HV_FINANCE_SOURCE_DRAFTS_ENABLED === 'true',
       accountingCertified: false,
       message: 'Schema connection verified for this deployment; opening balances, tax mapping and accountant approval are separate.',
     }, { headers: { 'Cache-Control': 'private, no-store' } });
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
     console.error('Native accounting health check failed', error instanceof Error ? error.name : 'unknown');
     return NextResponse.json({
       success: false, ledgerSchemaReachable: false, status: 'DATABASE_NOT_READY',
-      postingEnabled: false, accountingCertified: false,
+      postingEnabled: false, draftEditingEnabled: false, accountingCertified: false,
     }, { status: 503, headers: { 'Cache-Control': 'private, no-store' } });
   }
 }
