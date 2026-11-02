@@ -874,3 +874,73 @@ model UgcContactActivity {
   @@index([contactId, createdAt])
   @@map("ugc_contact_activities")
 }
+
+
+// ────────────────────────────────────────────────────────────────
+// Herbal Vitaly native general ledger (isolated from affiliate models)
+// These additive models require a reviewed Prisma migration before use.
+// The posting API is disabled in production until accountant approval.
+// ────────────────────────────────────────────────────────────────
+
+model HvGlAccount {
+  id            String     @id @default(cuid())
+  code          String     @unique @db.VarChar(32)
+  name          String     @db.VarChar(200)
+  accountType   String     @db.VarChar(32) // ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  lines         HvGlLine[]
+
+  @@map("hv_gl_accounts")
+}
+
+model HvGlJournal {
+  id              String     @id @default(cuid())
+  documentNo      String     @unique @db.VarChar(80)
+  idempotencyKey  String     @unique @db.VarChar(160)
+  effectiveDate   DateTime   @db.Date
+  description     String     @db.VarChar(500)
+  currency        String     @default("EGP") @db.VarChar(3)
+  status          String     @default("DRAFT") @db.VarChar(16) // DRAFT, POSTED
+  sourceType      String?    @db.VarChar(80)
+  sourceId        String?    @db.VarChar(160)
+  createdByUserId String     @db.VarChar(80)
+  postedByUserId  String?    @db.VarChar(80)
+  postedAt        DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  lines           HvGlLine[]
+
+  @@index([effectiveDate, status])
+  @@index([sourceType, sourceId])
+  @@map("hv_gl_journals")
+}
+
+model HvGlLine {
+  id              String      @id @default(cuid())
+  journalId       String
+  accountId       String
+  lineNumber      Int
+  debitPiasters   BigInt      @default(0)
+  creditPiasters  BigInt      @default(0)
+  memo            String?     @db.VarChar(500)
+  journal         HvGlJournal @relation(fields: [journalId], references: [id], onDelete: Restrict)
+  account         HvGlAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@unique([journalId, lineNumber])
+  @@index([accountId])
+  @@map("hv_gl_lines")
+}
+
+model HvGlPeriod {
+  id          String    @id @default(cuid())
+  year        Int
+  month       Int
+  isClosed    Boolean   @default(false)
+  closedAt    DateTime?
+  closedBy    String?   @db.VarChar(80)
+
+  @@unique([year, month])
+  @@map("hv_gl_periods")
+}
