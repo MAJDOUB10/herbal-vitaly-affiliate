@@ -40,13 +40,13 @@ const cards = [
   { name: 'Sales & Customers', href: '/admin/orders', description: 'Shopify orders, refunds and customer records', icon: ShoppingBag, ready: true },
   { name: 'COD Reconciliation', href: '/admin/cod', description: 'Bosta collections and evidence-based merchant settlement', icon: Truck, ready: true },
   { name: 'Affiliate Commissions', href: '/admin/payouts', description: 'Pending, approved and paid partner commissions', icon: Users, ready: true },
-  { name: 'Customer Invoices', href: '', description: 'Customer invoices, credit notes and receivables', icon: ReceiptText, ready: false },
-  { name: 'Purchases & Suppliers', href: '', description: 'Purchase orders, supplier bills and accounts payable', icon: Building2, ready: false },
-  { name: 'Expenses & Budgets', href: '', description: 'Operating expenses, advertising and cost centers', icon: Wallet, ready: false },
+  { name: 'Customer Invoices', href: '/admin/finance/documents', description: 'Customer invoices, credit notes and receivables', icon: ReceiptText, ready: false },
+  { name: 'Purchases & Suppliers', href: '/admin/finance/documents', description: 'Purchase orders, supplier bills and accounts payable', icon: Building2, ready: false },
+  { name: 'Expenses & Budgets', href: '/admin/finance/documents', description: 'Operating expenses, advertising and cost centers', icon: Wallet, ready: false },
   { name: 'Inventory & COGS', href: '', description: 'Product costs, valuation and gross margins', icon: Package, ready: false },
   { name: 'General Ledger', href: '/admin/finance/journals', description: 'Native EGP journal records (staging/migration gated; posting disabled in production)', icon: BookOpen, ready: false },
   { name: 'Tax & ETA', href: '', description: 'Egypt tax mapping, e-Invoice and e-Receipt', icon: Scale, ready: false },
-  { name: 'Financial Statements', href: '', description: 'Balance sheet, P&L and cash flow from posted entries', icon: FileText, ready: false },
+  { name: 'Financial Statements', href: '/admin/finance/reports', description: 'Balance sheet, P&L and cash flow from posted entries', icon: FileText, ready: false },
 ];
 
 function Metric({ label, value, hint }: { label: string; value: string; hint: string }) {
@@ -119,7 +119,7 @@ export default function FinanceAccountingPage() {
         <div className="flex items-start gap-2">
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            <strong>Native accounting not yet activated.</strong> No purchases, supplier invoices, bank balances,
+            <strong>Native accounting requires validation.</strong> No approved purchases, booked supplier invoices, bank balances,
             income statement, taxes payable or net profit are being calculated. Nothing on this page
             creates invoices, journal entries, commission approvals or payments.
           </div>
@@ -158,7 +158,7 @@ export default function FinanceAccountingPage() {
       <section className="space-y-3">
         <div>
           <h2 className="text-lg font-semibold text-[#173621]">Finance modules</h2>
-          <p className="text-xs text-slate-500">Operational pages are linked; full accounting modules require ERP integration.</p>
+          <p className="text-xs text-slate-500">Operational pages are linked. Native company documents and GL reports are available for staged activation; unimplemented functions remain clearly marked.</p>
         </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {cards.map(item => (
