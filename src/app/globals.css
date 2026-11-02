@@ -133,3 +133,37 @@
   .hv-workspace { @apply bg-[#F7FAF8]/60; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; scroll-behavior: auto !important; } }
+
+/* Public affiliate homepage — architectural white, natural daylight, brand green. */
+.hv-landing-hero {
+  background:
+    radial-gradient(ellipse 48% 65% at 84% 44%, rgba(214, 240, 223, .60), transparent 77%),
+    radial-gradient(ellipse 44% 55% at 8% 15%, rgba(244, 252, 247, .9), transparent 74%),
+    #fff;
+}
+.hv-landing-orb {
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+  border-radius: 9999px;
+}
+.hv-landing-orb-one {
+  width: 30rem;
+  height: 30rem;
+  top: 12%;
+  right: -13rem;
+  border: 3.2rem solid rgba(31, 107, 58, .045);
+}
+.hv-landing-orb-two {
+  width: 25rem;
+  height: 25rem;
+  bottom: -19rem;
+  left: -14rem;
+  border: 2rem solid rgba(31, 107, 58, .04);
+}
+#faq summary::-webkit-details-marker { display: none; }
+#faq summary { list-style: none; }
+@media (max-width: 640px) {
+  .hv-landing-orb-one { width: 20rem; height: 20rem; right: -13rem; }
+  .hv-landing-orb-two { display: none; }
+}
