@@ -41,7 +41,7 @@ test('corporate editorial story is distinct and product visuals are real, offici
   }
   assert.ok(!landing.includes('YOURCODE'));
   assert.ok(!landing.includes('SARA15'));
-  assert.ok(!landing.includes('guaranteed earnings'));
+  assert.ok(landing.includes('no earnings are guaranteed'));
   assert.ok(!landing.includes('100% guaranteed'));
   assert.ok(!landing.includes('fake reviews'));
 });
