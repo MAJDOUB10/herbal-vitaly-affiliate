@@ -26,13 +26,6 @@ export async function GET(request: NextRequest) {
     const user = await requireAdmin(request);
     if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    if (process.env.HV_NATIVE_ACCOUNTING_SCHEMA_READY !== 'true') {
-      return NextResponse.json({
-        success: true, status: 'NOT_ACTIVATED', journals: [],
-        note: 'Native accounting tables and approved opening balances are not yet activated.',
-      }, { headers: { 'Cache-Control': 'private, no-store' } });
-    }
-
     const rows = await prisma.hvGlJournal.findMany({
       orderBy: [{ effectiveDate: 'desc' }, { createdAt: 'desc' }],
       take: 100,
