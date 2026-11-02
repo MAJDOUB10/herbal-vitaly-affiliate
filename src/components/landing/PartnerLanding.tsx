@@ -6,6 +6,7 @@ import {
   ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, BadgeCheck, BarChart3,
   Check, ChevronDown, ClipboardCheck, HeartHandshake, Link2, Menu,
   MessageCircle, Play, ShieldCheck, Sparkles, TicketPercent, X,
+  Globe2, Leaf, PackageCheck, UsersRound,
 } from 'lucide-react';
 import { HERBAL_VITALY } from '@/components/brand/BrandIdentity';
 
@@ -71,13 +72,17 @@ const products = [
 
 const translations = {
   en: {
-    navStory: 'Our philosophy', navProducts: 'Our products', navPartner: 'Partner program',
-    navFaq: 'Questions', logIn: 'Partner login', join: 'Become a partner',
+    navStory: 'About Herbal Vitaly', navProducts: 'Product Portfolio', navPartner: 'Partnership',
+    navFaq: 'Resources', logIn: 'Sign In', join: 'Become a Partner',
     ariaMenu: 'Toggle navigation', languageName: 'English', alternative: 'العربية',
     eyebrow: 'THE HERBAL VITALY PARTNER JOURNAL · 01',
     heroTitle1: 'Wellness has', heroTitle2: 'a new story.', heroAccent: 'Yours.',
     heroText: 'Meet a contemporary Egyptian nutrition brand built around considered ingredients, everyday wellbeing and the people who share our story.',
     heroCta: 'Explore the partnership', heroAlt: 'Discover the collection',
+    heroProof1: 'Creator Partnership', heroProofDesc1: 'Build, promote and grow with Herbal Vitaly.',
+    heroProof2: 'Official Product Portfolio', heroProofDesc2: 'Our range of nutritional supplements.',
+    heroProof3: 'Trusted Brand Story', heroProofDesc3: 'An Egyptian brand rooted in everyday wellness.',
+    heroValueStrip: 'NUTRITIONAL WELLBEING   ·   EGYPTIAN NUTRITION BRAND   ·   GROWTH THROUGH PARTNERSHIP',
     issueLabel: 'THE BRAND / THE PEOPLE / THE PARTNERSHIP',
     heroIndex: 'A DIFFERENT KIND OF PARTNERSHIP',
     scroll: 'SCROLL TO EXPLORE',
@@ -139,13 +144,17 @@ const translations = {
     footerDisclaimer: 'Eligible commissions are verified; no earnings are guaranteed.',
   },
   ar: {
-    navStory: 'فلسفتنا', navProducts: 'منتجاتنا', navPartner: 'برنامج الشركاء',
-    navFaq: 'أسئلة شائعة', logIn: 'دخول الشركاء', join: 'انضم كشريك',
+    navStory: 'عن هيربال فيتالي', navProducts: 'منتجاتنا', navPartner: 'الشراكة',
+    navFaq: 'الأسئلة الشائعة', logIn: 'تسجيل الدخول', join: 'انضم كشريك',
     ariaMenu: 'فتح القائمة', languageName: 'العربية', alternative: 'English',
     eyebrow: 'HERBAL VITALY · برنامج الشركاء',
     heroTitle1: 'للصحة حكاية', heroTitle2: 'جديدة.', heroAccent: 'حكايتك.',
     heroText: 'اكتشف علامة مصرية للمكملات الغذائية بتهتم باختيار المكونات، والعناية اليومية، والناس اللي بيشاركوا حكايتها.',
     heroCta: 'اكتشف الشراكة', heroAlt: 'شوف منتجاتنا',
+    heroProof1: 'برنامج شركاء', heroProofDesc1: 'شارك جمهورك واكبر مع هيربال فيتالي.',
+    heroProof2: 'منتجات أصلية', heroProofDesc2: 'مجموعة متنوعة من المكملات الغذائية.',
+    heroProof3: 'علامة مصرية', heroProofDesc3: 'اهتمام حقيقي بالصحة اليومية.',
+    heroValueStrip: 'دعم غذائي يومي   ·   علامة مصرية   ·   نمو من خلال الشراكة',
     issueLabel: 'العلامة / الناس / الشراكة', heroIndex: 'شراكة بطريقتنا',
     scroll: 'اكتشف أكتر',
     imageCaption: 'تغذية مدروسة. للحياة اليومية.',
@@ -280,7 +289,7 @@ export default function PartnerLanding() {
         <div className="hv-header-actions">
           <button type="button" className="hv-language" onClick={() => { setLanguage(arabic ? 'en' : 'ar'); closeMenu(); }}
             aria-label={arabic ? 'Switch to English' : 'التبديل إلى العربية'}>
-            <span className="hv-language-dot" aria-hidden="true" />{t.alternative}
+            <Globe2 size={17} aria-hidden="true" /><span>{language.toUpperCase()}</span><ChevronDown size={13} aria-hidden="true" />
           </button>
           <Link className="hv-header-signin" href="/login">{t.logIn}</Link>
           <Link className="hv-button hv-button--small" href="/register">{t.join}<ForwardArrow size={15} aria-hidden="true"/></Link>
@@ -300,34 +309,61 @@ export default function PartnerLanding() {
       </nav>}
     </header>
 
-    <section className="hv-hero" id="content">
+    <section className="hv-hero hv-hero-v2" id="content" aria-labelledby="hv-hero-title">
       <div className="hv-hero-rail" aria-hidden="true"><span>HERBAL VITALY</span><span>THE PARTNER JOURNAL</span><span>01 — 05</span></div>
       <div className="hv-hero-content">
         <Reveal className="hv-hero-copy">
           <div className="hv-eyebrow"><span className="hv-eyebrow-line"/>{t.eyebrow}</div>
-          <h1 className="hv-display-title">{t.heroTitle1}<br/>{t.heroTitle2}<br/><em>{t.heroAccent}</em></h1>
+          <h1 id="hv-hero-title" className="hv-display-title">{t.heroTitle1}<br/>{t.heroTitle2}<br/><em>{t.heroAccent}</em></h1>
           <p className="hv-hero-description">{t.heroText}</p>
           <div className="hv-action-row">
             <a className="hv-button" href="#partnership">{t.heroCta}<ForwardArrow size={18} aria-hidden="true"/></a>
-            <a className="hv-text-link" href="#collection">{t.heroAlt}<ArrowUpRight size={18} aria-hidden="true"/></a>
+            <a className="hv-text-link" href="#collection">{t.heroAlt}<ForwardArrow size={18} aria-hidden="true"/></a>
           </div>
-          <div className="hv-hero-bottom"><span>{t.issueLabel}</span><a href="#philosophy">{t.scroll}<ArrowDown size={15}/></a></div>
+          <div className="hv-hero-trust" aria-label={arabic ? 'مميزات الشراكة' : 'Reasons to partner with Herbal Vitaly'}>
+            <div className="hv-hero-trust-item">
+              <UsersRound size={30} strokeWidth={1.6} aria-hidden="true"/>
+              <span><strong>{t.heroProof1}</strong><small>{t.heroProofDesc1}</small></span>
+            </div>
+            <div className="hv-hero-trust-item">
+              <PackageCheck size={30} strokeWidth={1.6} aria-hidden="true"/>
+              <span><strong>{t.heroProof2}</strong><small>{t.heroProofDesc2}</small></span>
+            </div>
+            <div className="hv-hero-trust-item">
+              <ShieldCheck size={30} strokeWidth={1.6} aria-hidden="true"/>
+              <span><strong>{t.heroProof3}</strong><small>{t.heroProofDesc3}</small></span>
+            </div>
+          </div>
         </Reveal>
         <Reveal className="hv-hero-art" delay={120}>
           <div className="hv-hero-art-plate">
-            <div className="hv-hero-art-arc" aria-hidden="true"/>
             <span className="hv-art-number">HERBAL VITALY / 001</span>
-            <div className="hv-art-products">
-              <img className="hv-art-image hv-art-image--one"
-                src={products[0].image} width="370" height="370" alt="TIYNEFRET Herbal Vitaly official product packaging"
-                fetchPriority="high"/>
-              <img className="hv-art-image hv-art-image--two"
-                src={products[1].image} width="280" height="280" alt="USHABTI Herbal Vitaly official product packaging"/>
+            <div className="hv-hero-art-arc" aria-hidden="true"/>
+            <div className="hv-hero-window-shadow" aria-hidden="true"/>
+            <div className="hv-hero-botanical hv-hero-botanical--left" aria-hidden="true">
+              <Leaf/><Leaf/><Leaf/><Leaf/>
             </div>
-            <div className="hv-art-caption"><span className="hv-art-caption-mark">HV.</span><span>{t.imageCaption}</span></div>
+            <div className="hv-hero-stage">
+              <div className="hv-hero-stage-podium hv-hero-stage-podium--wide" aria-hidden="true"/>
+              <div className="hv-hero-stage-podium hv-hero-stage-podium--small" aria-hidden="true"/>
+              <a className="hv-hero-product hv-hero-product--tiynefret" href={products[0].url} target="_blank" rel="noopener noreferrer" aria-label="Explore TIYNEFRET in the official Herbal Vitaly store">
+                <img src={products[0].image} width="540" height="540" alt="Original TIYNEFRET packaging — hair, skin and nails food supplement" fetchPriority="high" />
+              </a>
+              <a className="hv-hero-product hv-hero-product--ushabti" href={products[1].url} target="_blank" rel="noopener noreferrer" aria-label="Explore USHABTI in the official Herbal Vitaly store">
+                <img src={products[1].image} width="380" height="380" alt="Original blue USHABTI bottle with orange cap" />
+              </a>
+              <span className="hv-stage-leaf hv-stage-leaf--one" aria-hidden="true"><Leaf/></span>
+              <span className="hv-stage-leaf hv-stage-leaf--two" aria-hidden="true"><Leaf/></span>
+            </div>
             <span className="hv-art-vertical" aria-hidden="true">{t.heroIndex}</span>
           </div>
         </Reveal>
+      </div>
+      <div className="hv-hero-signature">
+        <span className="hv-hero-signature-rule" aria-hidden="true"/>
+        <Leaf size={17} strokeWidth={1.5} aria-hidden="true"/>
+        <span>{t.heroValueStrip}</span>
+        <span className="hv-hero-signature-rule" aria-hidden="true"/>
       </div>
       <div className="hv-hero-footline" aria-hidden="true" />
     </section>
