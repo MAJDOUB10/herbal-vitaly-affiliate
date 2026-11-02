@@ -44,7 +44,7 @@ const cards = [
   { name: 'Purchases & Suppliers', href: '', description: 'Purchase orders, supplier bills and accounts payable', icon: Building2, ready: false },
   { name: 'Expenses & Budgets', href: '', description: 'Operating expenses, advertising and cost centers', icon: Wallet, ready: false },
   { name: 'Inventory & COGS', href: '', description: 'Product costs, valuation and gross margins', icon: Package, ready: false },
-  { name: 'General Ledger', href: '', description: 'Chart of accounts, balanced entries and trial balance', icon: BookOpen, ready: false },
+  { name: 'General Ledger', href: '/admin/finance/journals', description: 'Native EGP journal records (staging/migration gated; posting disabled in production)', icon: BookOpen, ready: false },
   { name: 'Tax & ETA', href: '', description: 'Egypt tax mapping, e-Invoice and e-Receipt', icon: Scale, ready: false },
   { name: 'Financial Statements', href: '', description: 'Balance sheet, P&L and cash flow from posted entries', icon: FileText, ready: false },
 ];
@@ -94,7 +94,7 @@ export default function FinanceAccountingPage() {
           <h1 className="mt-1 text-2xl font-bold text-[#173621]">Finance & Accounting</h1>
           <p className="mt-1 max-w-3xl text-sm text-slate-600">
             Company-wide financial workspace. The operational figures below are live Refferq records;
-            statutory accounting remains unavailable until a dedicated ledger is connected and reconciled.
+            statutory accounting remains unavailable until native PostgreSQL accounting tables, opening balances and controls are validated.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -119,7 +119,7 @@ export default function FinanceAccountingPage() {
         <div className="flex items-start gap-2">
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            <strong>Accounting not connected.</strong> No purchases, supplier invoices, bank balances,
+            <strong>Native accounting not yet activated.</strong> No purchases, supplier invoices, bank balances,
             income statement, taxes payable or net profit are being calculated. Nothing on this page
             creates invoices, journal entries, commission approvals or payments.
           </div>
@@ -167,12 +167,12 @@ export default function FinanceAccountingPage() {
                 <item.icon className="h-5 w-5 text-[#1F6B3A]" />
                 <span className={'rounded-full px-2 py-1 text-[11px] font-medium ' +
                   (item.ready ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-600')}>
-                  {item.ready ? 'Operational data' : 'ERP required'}
+                  {item.ready ? 'Operational data' : item.href ? 'Native staging' : 'Not yet live'}
                 </span>
               </div>
               <h3 className="mt-3 text-sm font-semibold text-[#173621]">{item.name}</h3>
               <p className="mt-1 min-h-10 text-xs text-slate-500">{item.description}</p>
-              {item.ready ? (
+              {item.href ? (
                 <Link href={item.href} className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[#1F6B3A]">
                   Open module <ArrowUpRight className="h-4 w-4" />
                 </Link>
@@ -190,7 +190,7 @@ export default function FinanceAccountingPage() {
           <h2 className="font-semibold text-[#173621]">Full accounting implementation requirements</h2>
         </div>
         <p className="mt-2 text-sm text-slate-600">
-          Deploy a separate double-entry accounting service; configure EGP chart of accounts,
+          Activate the built-in PostgreSQL double-entry ledger after migration; configure an EGP chart of accounts,
           Egyptian tax treatment per product, supplier and customer masters, payment clearing accounts,
           validated Shopify/Bosta imports, immutable posting and reversal journals, and accountant approval.
         </p>
