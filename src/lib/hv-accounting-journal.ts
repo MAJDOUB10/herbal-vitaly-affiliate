@@ -38,9 +38,9 @@ export function validateBalancedJournal(input: unknown): HvJournalLineInput[] {
     if (memo.length > 500) throw new Error('Line memo too long');
     return { accountCode, debitPiasters: debit, creditPiasters: credit, memo };
   });
-  const debits = normalized.reduce((sum, line) => sum + BigInt(line.debitPiasters), 0n);
-  const credits = normalized.reduce((sum, line) => sum + BigInt(line.creditPiasters), 0n);
-  if (debits <= 0n || debits !== credits) throw new Error('Journal debits and credits must balance');
+  const debits = normalized.reduce((sum, line) => sum + BigInt(line.debitPiasters), BigInt(0));
+  const credits = normalized.reduce((sum, line) => sum + BigInt(line.creditPiasters), BigInt(0));
+  if (debits <= BigInt(0) || debits !== credits) throw new Error('Journal debits and credits must balance');
   return normalized;
 }
 
