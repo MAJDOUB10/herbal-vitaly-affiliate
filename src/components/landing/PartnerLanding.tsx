@@ -1,404 +1,512 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  ArrowLeft, ArrowRight, ArrowUpRight, BadgeCheck, BarChart3, Check,
-  ChevronDown, CircleHelp, ClipboardCheck, Gift, HeartHandshake, LifeBuoy,
-  Link2, Mail, Menu, PackageCheck, PlayCircle, ShieldCheck, Sparkles, TicketPercent,
-  Truck, Users, Wallet, X,
+  ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, BadgeCheck, BarChart3,
+  Check, ChevronDown, ClipboardCheck, HeartHandshake, Link2, Menu,
+  MessageCircle, Play, ShieldCheck, Sparkles, TicketPercent, X,
 } from 'lucide-react';
 import { HERBAL_VITALY } from '@/components/brand/BrandIdentity';
 
-type Language = 'ar' | 'en';
+type Language = 'en' | 'ar';
+type Collection = 'signature' | 'women' | 'men' | 'wellbeing';
 
-const content = {
-  ar: {
-    lang: 'العربية', alternate: 'English',
-    navHow: 'إزاي بيشتغل؟', navBenefits: 'المميزات', navFaq: 'الأسئلة الشائعة',
-    signIn: 'تسجيل الدخول', join: 'انضم كشريك', mobileMenu: 'القائمة',
-    eyebrow: 'HERBAL VITALY · AFFILIATE PROGRAM',
-    hero1: 'تأثيرك يستاهل',
-    hero2: 'فرصة تكبر بيها.',
-    heroBody: 'عندك جمهور بيثق في ترشيحاتك؟ انضم لبرنامج شركاء Herbal Vitaly، شارك منتجاتنا بكودك الخاص، وتابع الطلبات والعمولات المؤهلة من مكان واحد.',
-    heroPrimary: 'ابدأ دلوقتي', heroSecondary: 'أنا شريك بالفعل',
-    guide: 'شوف شرح التسجيل', guideTime: 'فيديو خطوة بخطوة',
-    trust1: 'تسجيل أونلاين', trust2: 'كود خصم خاص بيك', trust3: 'متابعة واضحة للطلبات',
-    previewEyebrow: 'نظرة على لوحة الشريك', previewTitle: 'كل شغلك في مكان واحد',
-    previewTag: 'نموذج توضيحي', previewCode: 'كودك الشخصي', previewLinks: 'روابط المنتجات',
-    previewTracking: 'متابعة الطلبات', previewCommission: 'العمولات المؤهلة',
-    previewSample: 'مثال فقط', previewProducts: 'منتجات تقدر تروّج لها',
-    previewProduct1: 'تي نفرت', previewProduct2: 'أوشبتي',
-    featuresEyebrow: 'ليه تبقى شريك معانا؟',
-    featuresTitle: 'من أول لينك لحد متابعة عمولتك',
-    featuresBody: 'أدوات بسيطة تساعدك تركز على المحتوى والتوصيات، وتتابع أداءك بوضوح.',
-    features: [
-      { title: 'كود خصم باسمك', description: 'اختار كود خاص بيك، وشاركه مع جمهورك على السوشيال ميديا.' },
-      { title: 'لينك مخصص لكل منتج', description: 'روابط تساعدك تروّج للمنتجات وتتبع المبيعات المرتبطة بك.' },
-      { title: 'متابعة الطلبات والتوصيل', description: 'اطلع على الطلبات وحالة التوصيل والمرتجعات من حسابك.' },
-      { title: 'تقارير وعمولات', description: 'اعرف المبيعات والعمولات المؤهلة بعد التحقق من الطلبات والتحصيل.' },
-      { title: 'دعم للشركاء', description: 'افتح طلب دعم وتابع رد فريقنا من نفس البوابة.' },
-      { title: 'كل حاجة في حساب واحد', description: 'بياناتك، الأكواد، الروابط، الطلبات والتقارير في مكان منظم.' },
-    ],
-    stepsEyebrow: '3 خطوات وتبدأ',
-    stepsTitle: 'ابدأ بسهولة، واشتغل بطريقتك',
-    steps: [
-      { title: 'سجّل حسابك', description: 'أنشئ حساب شريك وفعّل بريدك الإلكتروني.' },
-      { title: 'اختار الكود واللينكات', description: 'حدّد كود الخصم الخاص بيك، وخد روابط المنتجات.' },
-      { title: 'انشر وتابع', description: 'شارك مع جمهورك، وتابع الطلبات والعمولات من لوحة التحكم.' },
-    ],
-    whoEyebrow: 'مين يقدر ينضم؟',
-    whoTitle: 'لصنّاع المحتوى والمؤثرين اللي بيحبوا يشاركوا اختيارات مفيدة.',
-    whoBody: 'سواء بتقدم محتوى عن العناية الشخصية، الصحة العامة، أو أسلوب الحياة، تقدر تقدم طلب الانضمام وتتعرف على أدوات البرنامج.',
-    whoNote: 'قبول الشراكة والعمولات يخضعان لشروط البرنامج والتحقق من المبيعات.',
-    explore: 'اكتشف منتجات Herbal Vitaly',
-    faqEyebrow: 'محتاج تعرف أكتر؟',
-    faqTitle: 'أسئلة بتتكرر',
-    faqs: [
-      { q: 'لازم يكون عندي عدد معين من المتابعين؟', a: 'تقدر تسجّل اهتمامك بالبرنامج، ويتم تقييم الأهلية حسب سياسة Herbal Vitaly ومعايير الشراكة المعمول بها.' },
-      { q: 'هستلم كود الخصم إزاي؟', a: 'بعد إنشاء الحساب وتفعيل البريد الإلكتروني وتسجيل الدخول، هتقدر تختار كود متاح وتربطه بحسابك والمنتجات المؤهلة.' },
-      { q: 'أتابع المبيعات والعمولات فين؟', a: 'من لوحة حسابك هتشوف الروابط والطلبات وبيانات التوصيل والعمولات وفقًا لحالة كل طلب.' },
-      { q: 'هل العمولة بتتحسب أول ما العميل يطلب؟', a: 'لأ، استحقاق العمولة بيكون حسب شروط البرنامج والتحقق من الطلب والتسليم والتحصيل والتسوية، ومش بمجرد إنشاء الطلب.' },
-      { q: 'أكلم الدعم إزاي؟', a: 'من حساب الشريك تقدر تفتح تذكرة في مركز الدعم، أو تبعت إيميل إلى contact@herbalvitaly.com.' },
-    ],
-    bottomEyebrow: 'HERBAL VITALY AFFILIATE',
-    bottomTitle: 'جاهز تحوّل محتواك لشراكة حقيقية؟',
-    bottomBody: 'سجّل، اختار كودك، وابدأ شارك منتجات Herbal Vitaly مع جمهورك.',
-    bottomCta: 'إنشاء حساب شريك', bottomLogin: 'عندك حساب؟ سجّل دخول',
-    footerTag: 'Let nature be your medicine',
-    footerAbout: 'منصة شركاء Herbal Vitaly للتسويق بالعمولة وإدارة روابط المنتجات والطلبات.',
-    footerLinks: 'روابط مفيدة', footerCompany: 'Herbal Vitaly', footerContact: 'تواصل معانا',
-    footerPrivacy: 'الخصوصية', footerTerms: 'شروط البرنامج',
-    footerRights: 'جميع الحقوق محفوظة.',
-    footerNotice: 'العمولات تُراجع وفقًا للطلبات المؤهلة، وليست أرباحًا مضمونة.',
+const products = [
+  {
+    id: 'tiynefret', name: 'TIYNEFRET', category: 'Beauty from within',
+    arabicCategory: 'العناية بالجمال من الداخل',
+    description: 'Daily nutritional support for hair, skin and nails.',
+    arabicDescription: 'دعم غذائي يومي للشعر والبشرة والأظافر.',
+    image: 'https://cdn.shopify.com/s/files/1/1003/9420/5506/files/Image_ChatGPT_9_oct._2026_03_29_41-9.png?v=1791513017',
+    url: 'https://herbalvitaly.com/products/tiynefret', color: 'rose',
+    collections: ['signature', 'women'],
   },
+  {
+    id: 'ushabti', name: 'USHABTI', category: 'Men’s vitality',
+    arabicCategory: 'حيوية الرجل',
+    description: 'Tribulus and black maca for everyday vitality.',
+    arabicDescription: 'تريبولوس وماكا سوداء لدعم الحيوية.',
+    image: 'https://cdn.shopify.com/s/files/1/1003/9420/5506/files/ChatGPT-Image-23-juin-2026_-04_19_01.webp?v=1782184805',
+    url: 'https://herbalvitaly.com/products/ushabti', color: 'blue',
+    collections: ['signature', 'men'],
+  },
+  {
+    id: 'tut-flora', name: 'TUT FLORA', category: 'Digestive balance',
+    arabicCategory: 'راحة وتوازن الهضم',
+    description: 'Probiotic nutritional support for gut wellness.',
+    arabicDescription: 'دعم غذائي بالبروبيوتيك لصحة الأمعاء.',
+    image: 'https://cdn.shopify.com/s/files/1/1003/9420/5506/files/tut_flora_651x651_1e8e55b7-e70e-41a0-8ea5-5a5339370025.webp?v=1781925930',
+    url: 'https://herbalvitaly.com/products/tut-flora', color: 'clay',
+    collections: ['signature', 'wellbeing'],
+  },
+  {
+    id: 'inomeri', name: 'INOMERI', category: 'Women’s wellbeing',
+    arabicCategory: 'صحة المرأة',
+    description: 'Myo-inositol and selected nutrients for women.',
+    arabicDescription: 'مايو إينوزيتول وعناصر غذائية مختارة للمرأة.',
+    image: 'https://cdn.shopify.com/s/files/1/1003/9420/5506/files/inomeri_651x651_3d29d180-cee8-42bc-a01e-99b9955b742f.webp?v=1781926334',
+    url: 'https://herbalvitaly.com/products/inomeri', color: 'lilac',
+    collections: ['women'],
+  },
+  {
+    id: 'flexoria', name: 'FLEXORIA', category: 'Movement & joints',
+    arabicCategory: 'المفاصل والحركة',
+    description: 'Nutritional support for comfortable everyday movement.',
+    arabicDescription: 'دعم غذائي لراحة الحركة اليومية.',
+    image: 'https://cdn.shopify.com/s/files/1/1003/9420/5506/files/flexoria_651x651_3dfaee98-7a47-41e2-9293-855320050290.webp?v=1781926613',
+    url: 'https://herbalvitaly.com/products/flexoria', color: 'blue',
+    collections: ['wellbeing'],
+  },
+  {
+    id: 'amuhotep', name: 'AMUHOTEP', category: 'Omega-3 nutrition',
+    arabicCategory: 'دعم غذائي بأوميجا 3',
+    description: 'Liquid omega-3 nutritional support.',
+    arabicDescription: 'مكمل غذائي سائل بأحماض أوميجا 3.',
+    image: 'https://cdn.shopify.com/s/files/1/1003/9420/5506/files/amuhotep_651x651_94eee8db-27c1-4ff4-9315-2a7e4853b192.webp?v=1781926189',
+    url: 'https://herbalvitaly.com/products/amuhotep', color: 'blue',
+    collections: ['wellbeing'],
+  },
+] as const;
+
+const translations = {
   en: {
-    lang: 'English', alternate: 'العربية',
-    navHow: 'How it works', navBenefits: 'Benefits', navFaq: 'FAQs',
-    signIn: 'Sign in', join: 'Become a partner', mobileMenu: 'Menu',
-    eyebrow: 'HERBAL VITALY · AFFILIATE PROGRAM',
-    hero1: 'Your influence.',
-    hero2: 'A new opportunity.',
-    heroBody: 'Have an audience that trusts your recommendations? Join the Herbal Vitaly partner program, share products with your personal code, and follow eligible sales and commissions in one place.',
-    heroPrimary: 'Join the program', heroSecondary: 'I am already a partner',
-    guide: 'Watch the registration guide', guideTime: 'Step-by-step video',
-    trust1: 'Online registration', trust2: 'Your own discount code', trust3: 'Clear order visibility',
-    previewEyebrow: 'A glimpse inside the partner portal', previewTitle: 'Everything in one place',
-    previewTag: 'Illustrative preview', previewCode: 'Your promo code', previewLinks: 'Product links',
-    previewTracking: 'Order tracking', previewCommission: 'Eligible commissions',
-    previewSample: 'Sample only', previewProducts: 'Products to share',
-    previewProduct1: 'TIYNEFRET', previewProduct2: 'USHABTI',
-    featuresEyebrow: 'WHY PARTNER WITH US',
-    featuresTitle: 'From your first link to commission tracking',
-    featuresBody: 'Straightforward tools to help you focus on content while staying informed about performance.',
-    features: [
-      { title: 'Your own discount code', description: 'Choose a personal code and share it with your audience.' },
-      { title: 'Product-specific links', description: 'Share direct product links with your partner attribution.' },
-      { title: 'Orders and delivery', description: 'Follow orders, delivery progress and returns from your dashboard.' },
-      { title: 'Reports and commissions', description: 'See eligible sales and commissions after order and settlement verification.' },
-      { title: 'Partner support', description: 'Open a support ticket and follow our team’s replies in the portal.' },
-      { title: 'One connected dashboard', description: 'Keep your codes, links, orders, reports and details in one place.' },
-    ],
-    stepsEyebrow: 'THREE SIMPLE STEPS',
-    stepsTitle: 'Get started. Make it your own.',
+    navStory: 'Our philosophy', navProducts: 'Our products', navPartner: 'Partner program',
+    navFaq: 'Questions', logIn: 'Partner login', join: 'Become a partner',
+    ariaMenu: 'Toggle navigation', languageName: 'English', alternative: 'العربية',
+    eyebrow: 'THE HERBAL VITALY PARTNER JOURNAL · 01',
+    heroTitle1: 'Wellness has', heroTitle2: 'a new story.', heroAccent: 'Yours.',
+    heroText: 'Meet a contemporary Egyptian nutrition brand built around considered ingredients, everyday wellbeing and the people who share our story.',
+    heroCta: 'Explore the partnership', heroAlt: 'Discover the collection',
+    issueLabel: 'THE BRAND / THE PEOPLE / THE PARTNERSHIP',
+    heroIndex: 'A DIFFERENT KIND OF PARTNERSHIP',
+    scroll: 'SCROLL TO EXPLORE',
+    imageCaption: 'Thoughtful nutrition. Made for real life.',
+    strip1: 'NATURE-LED THINKING', strip2: 'A GROWING WELLNESS COLLECTION',
+    strip3: 'TOOLS FOR REAL PARTNERS',
+    philosophyIndex: '01 / THE COMPANY', philosophyTag: 'Our point of view',
+    philosophyTitle: 'Good wellbeing starts with thoughtful choices.',
+    philosophyText: 'Herbal Vitaly develops a portfolio of nutritional supplements shaped by purposeful formulas, clear product information and a belief that everyday care should feel considered — not complicated.',
+    philosophyQuote: 'Let nature be your medicine.',
+    philosophySmall: 'A guiding philosophy, not a substitute for medical treatment.',
+    philosophyLink: 'Get to know the brand',
+    philosophyCardA: 'Nature as inspiration', philosophyCardB: 'People at the centre',
+    productsIndex: '02 / THE COLLECTION', productsTag: 'The collection',
+    productsTitle: 'A portfolio with a point of view.',
+    productsText: 'Discover selected products from the official Herbal Vitaly store. Every product below uses its original Shopify imagery.',
+    productsTabs: { signature: 'Selected stories', women: 'Women’s care', men: 'Men’s vitality', wellbeing: 'Everyday wellbeing' },
+    viewProduct: 'Explore product', collectionLink: 'View the entire collection',
+    productNotice: 'Food supplements support nutrition and do not replace a balanced diet or medical advice.',
+    partnerIndex: '03 / THE PARTNERSHIP', partnerTag: 'The creator partnership',
+    partnerTitle1: 'Your voice.', partnerTitle2: 'Our world.', partnerTitle3: 'One connection.',
+    partnerText: 'We believe a great recommendation begins with trust. Our partner hub gives creators a practical way to share products and understand the journey from referral to eligible commission.',
+    partnerPrimary: 'Join the partner program', partnerVideo: 'Watch the partner guide',
+    partnerVideoNote: 'A short walkthrough of registration and the dashboard.',
+    stepTitle: 'A partnership, without the guesswork.',
     steps: [
-      { title: 'Create your account', description: 'Register as a partner and verify your email address.' },
-      { title: 'Choose your code and links', description: 'Set up your available promo code and access product links.' },
-      { title: 'Share and follow progress', description: 'Recommend products and track eligible orders and commissions.' },
+      { label: 'Create your place', description: 'Register your account and verify your email to enter the partner hub.' },
+      { label: 'Make it personal', description: 'Choose an available promo code and collect your product-specific referral links.' },
+      { label: 'Follow the journey', description: 'Review orders, delivery updates and eligible commissions in your dashboard.' },
     ],
-    whoEyebrow: 'WHO IS IT FOR?',
-    whoTitle: 'For creators and influencers who share meaningful recommendations.',
-    whoBody: 'If your content covers self-care, wellness or everyday lifestyle, you can apply to join the program and explore its tools.',
-    whoNote: 'Eligibility and commissions are subject to program terms and verified orders.',
-    explore: 'Explore Herbal Vitaly products',
-    faqEyebrow: 'GOOD TO KNOW',
-    faqTitle: 'Frequently asked questions',
+    workspace: 'THE PARTNER DESK', workspaceSub: 'Built for clarity, not clutter.',
+    workspaceItems: [
+      { title: 'Personal promo codes', sub: 'Easy to share, tied to your account' },
+      { title: 'Product & referral links', sub: 'A direct route to the collection' },
+      { title: 'Order & delivery tracking', sub: 'Stay informed through each stage' },
+      { title: 'Commission visibility', sub: 'Subject to order reconciliation' },
+    ],
+    workspaceFoot: 'The illustration describes features, not live results or guaranteed earnings.',
+    voicesIndex: '04 / WHO IT’S FOR', voicesTag: 'People make the difference',
+    voicesTitle: 'For creators who care what they recommend.',
+    voicesText: 'Whether you talk about beauty rituals, everyday wellness, movement or lifestyle, a partnership should feel authentic to your audience. Tell a real story, in your own voice.',
+    voicesNote: 'Program eligibility, discounts and commissions are governed by the current partner terms.',
+    faqIndex: '05 / THE DETAILS', faqTag: 'Worth knowing',
+    faqTitle: 'Good questions deserve clear answers.',
     faqs: [
-      { q: 'Do I need a certain number of followers?', a: 'You can register your interest. Eligibility is assessed according to Herbal Vitaly’s current partner program criteria.' },
-      { q: 'How do I get my discount code?', a: 'After registering, verifying your email and signing in, you can choose an available code and associate it with your eligible products.' },
-      { q: 'Where can I see my sales and commissions?', a: 'Your dashboard shows your product links, orders, delivery information and commission details according to each order’s status.' },
-      { q: 'Is a commission earned when a customer places an order?', a: 'Not automatically. Commissions depend on the program rules and verification of the order, delivery, collection and settlement.' },
-      { q: 'How can I contact support?', a: 'Open a ticket from your partner dashboard or email contact@herbalvitaly.com.' },
+      { q: 'How do I become a Herbal Vitaly partner?', a: 'Create a partner account, verify your email address and follow the onboarding steps. Participation remains subject to our program criteria.' },
+      { q: 'Can I choose my own discount code?', a: 'Yes. After signing in, you can choose an available personal code, subject to Shopify availability and the applicable program configuration.' },
+      { q: 'How do I know which orders count?', a: 'Your dashboard shows tracked orders and delivery information. Eligible commissions are confirmed according to the program rules, payment collection and delivery reconciliation.' },
+      { q: 'Does an order automatically create a commission?', a: 'No. A placed order does not guarantee a commission or payment. Orders must satisfy the program’s eligibility and reconciliation rules.' },
+      { q: 'Where can I get help?', a: 'Use the Support Center inside your account, or email contact@herbalvitaly.com.' },
     ],
-    bottomEyebrow: 'HERBAL VITALY AFFILIATE',
-    bottomTitle: 'Ready to grow with Herbal Vitaly?',
-    bottomBody: 'Create your account, choose your code and start sharing products with your audience.',
-    bottomCta: 'Create partner account', bottomLogin: 'Already a partner? Sign in',
-    footerTag: 'Let nature be your medicine',
-    footerAbout: 'The Herbal Vitaly partner platform for affiliate marketing and managing product links and orders.',
-    footerLinks: 'Useful links', footerCompany: 'Herbal Vitaly', footerContact: 'Contact us',
-    footerPrivacy: 'Privacy policy', footerTerms: 'Program terms',
-    footerRights: 'All rights reserved.',
-    footerNotice: 'Commissions depend on verified eligible orders; earnings are not guaranteed.',
+    finalIndex: 'THE NEXT CHAPTER', finalHeadline: 'There’s room for your story.',
+    finalBody: 'Join a community of people who want their recommendations to mean something.',
+    finalCta: 'Create a partner account', finalLogin: 'Already a partner? Sign in',
+    footerTagline: 'Let nature be your medicine', footerNote: 'Herbal Vitaly partner platform. Nutritional supplements and creator partnerships.',
+    footerExplore: 'Explore', footerAccount: 'Your account', footerContact: 'Contact',
+    footerStore: 'Herbal Vitaly Store', footerPrivacy: 'Privacy policy', footerTerms: 'Program terms',
+    footerRights: '© 2026 Herbal Vitaly. All rights reserved.',
+    footerDisclaimer: 'Eligible commissions are verified; no earnings are guaranteed.',
+  },
+  ar: {
+    navStory: 'فلسفتنا', navProducts: 'منتجاتنا', navPartner: 'برنامج الشركاء',
+    navFaq: 'أسئلة شائعة', logIn: 'دخول الشركاء', join: 'انضم كشريك',
+    ariaMenu: 'فتح القائمة', languageName: 'العربية', alternative: 'English',
+    eyebrow: 'HERBAL VITALY · برنامج الشركاء',
+    heroTitle1: 'للصحة حكاية', heroTitle2: 'جديدة.', heroAccent: 'حكايتك.',
+    heroText: 'اكتشف علامة مصرية للمكملات الغذائية بتهتم باختيار المكونات، والعناية اليومية، والناس اللي بيشاركوا حكايتها.',
+    heroCta: 'اكتشف الشراكة', heroAlt: 'شوف منتجاتنا',
+    issueLabel: 'العلامة / الناس / الشراكة', heroIndex: 'شراكة بطريقتنا',
+    scroll: 'اكتشف أكتر',
+    imageCaption: 'تغذية مدروسة. للحياة اليومية.',
+    strip1: 'الطبيعة مصدر إلهامنا', strip2: 'تشكيلة متنوعة', strip3: 'أدوات حقيقية للشركاء',
+    philosophyIndex: '01 / عن الشركة', philosophyTag: 'فلسفتنا',
+    philosophyTitle: 'العناية اليومية بتبدأ باختيارات مدروسة.',
+    philosophyText: 'هيربال فيتالي بتقدم مجموعة من المكملات الغذائية بتركيبات مختارة ومعلومات واضحة، انطلاقًا من فكرة إن الاهتمام اليومي بنفسك المفروض يكون أبسط.',
+    philosophyQuote: 'Let nature be your medicine.',
+    philosophySmall: 'فلسفة للعلامة، وليست بديلًا عن العلاج الطبي.',
+    philosophyLink: 'اكتشف علامتنا',
+    philosophyCardA: 'الطبيعة مصدر الإلهام', philosophyCardB: 'الناس في قلب اهتمامنا',
+    productsIndex: '02 / المنتجات', productsTag: 'تشكيلة هيربال فيتالي',
+    productsTitle: 'منتجات متنوعة. بفلسفة واحدة.',
+    productsText: 'اختار من منتجات هيربال فيتالي على المتجر الرسمي. كل الصور أصلية من صفحات منتجات Shopify.',
+    productsTabs: { signature: 'منتجات مختارة', women: 'العناية بالمرأة', men: 'حيوية الرجل', wellbeing: 'العناية اليومية' },
+    viewProduct: 'اكتشف المنتج', collectionLink: 'كل المنتجات',
+    productNotice: 'المكملات الغذائية مش بديل للأكل المتوازن أو النصيحة الطبية.',
+    partnerIndex: '03 / الشراكة', partnerTag: 'برنامج صناع المحتوى',
+    partnerTitle1: 'صوتك.', partnerTitle2: 'عالمنا.', partnerTitle3: 'شراكة حقيقية.',
+    partnerText: 'بنؤمن إن الترشيح الجيد بيبدأ من الثقة. برنامج الشركاء بيساعدك تشارك المنتجات وتتابع رحلة كل طلب لحد تقييم العمولة المستحقة.',
+    partnerPrimary: 'انضم للبرنامج', partnerVideo: 'فيديو شرح البرنامج',
+    partnerVideoNote: 'شرح سريع للتسجيل ولوحة الشريك.',
+    stepTitle: 'الشراكة خطوة بخطوة.',
+    steps: [
+      { label: 'اعمل حسابك', description: 'سجّل في برنامج الشركاء وفعّل بريدك الإلكتروني.' },
+      { label: 'خلّيها خاصة بيك', description: 'اختار كود خصم متاح وخد روابط المنتجات الخاصة بيك.' },
+      { label: 'تابع كل خطوة', description: 'راجع الطلبات وحالة الشحن والعمولات المؤهلة من حسابك.' },
+    ],
+    workspace: 'مساحة الشريك', workspaceSub: 'كل حاجة واضحة ومنظمة.',
+    workspaceItems: [
+      { title: 'كود خصم شخصي', sub: 'خاص بحسابك وسهل تشاركه' },
+      { title: 'روابط المنتجات', sub: 'روابط ترويج لكل منتج' },
+      { title: 'متابعة الطلبات', sub: 'تابع التوصيل وحالة الطلب' },
+      { title: 'متابعة العمولات', sub: 'بعد التحقق من الطلبات والتسويات' },
+    ],
+    workspaceFoot: 'عرض توضيحي للمزايا، مش بيانات بيع حقيقية أو ضمان أرباح.',
+    voicesIndex: '04 / الشركاء', voicesTag: 'الناس هي الأهم',
+    voicesTitle: 'لصناع المحتوى اللي يهمهم اللي بيرشحوه.',
+    voicesText: 'سواء محتواك عن الجمال، العناية اليومية، الرياضة أو الحياة الصحية، خلّي شراكتك صادقة مع جمهورك واحكي قصتك بأسلوبك.',
+    voicesNote: 'أهلية الانضمام والخصومات والعمولات بتخضع لشروط البرنامج.',
+    faqIndex: '05 / التفاصيل', faqTag: 'معلومات مهمة',
+    faqTitle: 'أسئلة مهمة. إجابات واضحة.',
+    faqs: [
+      { q: 'إزاي أنضم لبرنامج الشركاء؟', a: 'أنشئ حساب شريك وفعّل بريدك الإلكتروني وكمل خطوات التسجيل. القبول بيخضع لشروط البرنامج.' },
+      { q: 'ينفع أختار كود الخصم بنفسي؟', a: 'أيوه، بعد تسجيل الدخول تقدر تختار كود متاح حسب إعدادات البرنامج وتوفره على Shopify.' },
+      { q: 'إزاي أعرف الطلبات المؤهلة؟', a: 'لوحة التحكم بتوضح الطلبات ومعلومات التوصيل. العمولات بتتحدد بعد التحقق من التحصيل والتسوية.' },
+      { q: 'هل كل طلب عليه عمولة؟', a: 'مش تلقائي. لازم الطلب يستوفي شروط الاستحقاق والتسوية قبل احتساب العمولة.' },
+      { q: 'أتواصل معاكم إزاي؟', a: 'افتح تذكرة دعم من حسابك أو ابعت على contact@herbalvitaly.com.' },
+    ],
+    finalIndex: 'الخطوة الجاية', finalHeadline: 'حكايتك ليها مكان معانا.',
+    finalBody: 'انضم لبرنامج شراكة مبني على المحتوى الصادق والترشيحات الهادفة.',
+    finalCta: 'أنشئ حساب شريك', finalLogin: 'عندك حساب؟ سجّل دخول',
+    footerTagline: 'Let nature be your medicine', footerNote: 'منصة هيربال فيتالي للشركاء والمكملات الغذائية.',
+    footerExplore: 'اكتشف', footerAccount: 'حسابك', footerContact: 'تواصل',
+    footerStore: 'متجر هيربال فيتالي', footerPrivacy: 'الخصوصية', footerTerms: 'شروط البرنامج',
+    footerRights: '© 2026 Herbal Vitaly. جميع الحقوق محفوظة.',
+    footerDisclaimer: 'العمولات بتخضع للتحقق، ومفيش أرباح مضمونة.',
   },
 } as const;
 
-const featureIcons = [TicketPercent, Link2, Truck, BarChart3, LifeBuoy, Users];
-const stepIcons = [Users, Gift, ClipboardCheck];
+const benefitsIcons = [TicketPercent, Link2, ClipboardCheck, BarChart3];
 
-function Logo({ small = false }: { small?: boolean }) {
-  return <img
-    src={HERBAL_VITALY.logo}
-    alt="Herbal Vitaly — Let nature be your medicine"
-    width={small ? 125 : 155}
-    height={small ? 74 : 90}
-    className={small ? 'h-[55px] w-auto object-contain' : 'h-[66px] w-auto object-contain'}
-    loading="eager"
-  />;
+function Reveal({ children, className = '', delay = 0 }: {
+  children: React.ReactNode; className?: string; delay?: number;
+}) {
+  return <div data-hv-reveal style={{ '--reveal-delay': delay + 'ms' } as React.CSSProperties} className={className}>{children}</div>;
+}
+
+function BrandLogo({ small = false }: { small?: boolean }) {
+  return <img src={HERBAL_VITALY.logo} width={small ? 123 : 152}
+    height={small ? 76 : 92} alt="Herbal Vitaly — Let nature be your medicine"
+    className={small ? 'hv-brand-logo hv-brand-logo--small' : 'hv-brand-logo'} />;
 }
 
 export default function PartnerLanding() {
-  const [lang, setLang] = useState<Language>('ar');
+  // English is the default first-visit language, Arabic is an accessible alternative.
+  const [language, setLanguage] = useState<Language>('en');
   const [menuOpen, setMenuOpen] = useState(false);
-  const t = content[lang];
-  const arabic = lang === 'ar';
+  const [activeCollection, setActiveCollection] = useState<Collection>('signature');
+  const [scrolled, setScrolled] = useState(false);
+  const t = translations[language];
+  const arabic = language === 'ar';
   const ForwardArrow = arabic ? ArrowLeft : ArrowRight;
-  return (
-    <main dir={arabic ? 'rtl' : 'ltr'} lang={lang}
-      className="min-h-screen overflow-x-hidden bg-white text-[#173321]">
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:p-3">
-        {arabic ? 'انتقل للمحتوى' : 'Skip to content'}
-      </a>
-      <div className="bg-[#143E27] px-4 py-2 text-center text-[11px] font-semibold tracking-wider text-white sm:text-xs" dir="ltr">
-        HERBAL VITALY AFFILIATE HUB <span className="mx-2 text-[#8FC5A0]">✦</span> LET NATURE BE YOUR MEDICINE
+  const collections: Collection[] = ['signature', 'women', 'men', 'wellbeing'];
+  const displayedProducts = products.filter(item => (item.collections as readonly string[]).includes(activeCollection));
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    // Introduce only restrained, accessible motion. Content stays readable
+    // without JavaScript, IntersectionObserver or if reduced motion is preferred.
+    const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-hv-reveal]'));
+    if (!('IntersectionObserver' in window) ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const observer = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      }
+    }, { threshold: 0.06, rootMargin: '0px 0px -35px 0px' });
+    nodes.forEach(node => observer.observe(node));
+    requestAnimationFrame(() => document.documentElement.classList.add('hv-enhanced-motion'));
+    return () => {
+      observer.disconnect();
+      document.documentElement.classList.remove('hv-enhanced-motion');
+    };
+  }, [language, activeCollection]);
+
+  const closeMenu = () => setMenuOpen(false);
+
+  return <main className="hv-editorial" dir={arabic ? 'rtl' : 'ltr'} lang={language}>
+    <a href="#content" className="hv-skip">{arabic ? 'اذهب للمحتوى' : 'Skip to content'}</a>
+
+    <header className={`hv-header ${scrolled ? 'hv-header--scrolled' : ''}`}>
+      <div className="hv-header-inner">
+        <Link href="/" className="hv-header-logo" aria-label="Herbal Vitaly homepage" onClick={closeMenu}>
+          <BrandLogo />
+        </Link>
+        <nav className="hv-main-nav" aria-label="Main navigation">
+          <a href="#philosophy">{t.navStory}</a>
+          <a href="#collection">{t.navProducts}</a>
+          <a href="#partnership">{t.navPartner}</a>
+          <a href="#questions">{t.navFaq}</a>
+        </nav>
+        <div className="hv-header-actions">
+          <button type="button" className="hv-language" onClick={() => { setLanguage(arabic ? 'en' : 'ar'); closeMenu(); }}
+            aria-label={arabic ? 'Switch to English' : 'التبديل إلى العربية'}>
+            <span className="hv-language-dot" aria-hidden="true" />{t.alternative}
+          </button>
+          <Link className="hv-header-signin" href="/login">{t.logIn}</Link>
+          <Link className="hv-button hv-button--small" href="/register">{t.join}<ForwardArrow size={15} aria-hidden="true"/></Link>
+          <button className="hv-menu-button" type="button" aria-expanded={menuOpen} aria-controls="hv-mobile-navigation"
+            aria-label={t.ariaMenu} onClick={() => setMenuOpen(!menuOpen)}>
+            {menuOpen ? <X size={22}/> : <Menu size={22}/>}
+          </button>
+        </div>
       </div>
-      <header className="sticky top-0 z-40 border-b border-[#E6EFE9] bg-white/95 backdrop-blur-lg">
-        <div className="mx-auto flex h-[82px] max-w-[1240px] items-center justify-between gap-3 px-5 sm:px-8">
-          <Link href="/" aria-label="Herbal Vitaly Affiliate Hub home" className="shrink-0">
-            <Logo />
-          </Link>
-          <nav className="hidden items-center gap-8 text-sm font-medium text-[#50675A] md:flex" aria-label="Main navigation">
-            <a href="#how" className="transition-colors hover:text-[#1F6B3A]">{t.navHow}</a>
-            <a href="#benefits" className="transition-colors hover:text-[#1F6B3A]">{t.navBenefits}</a>
-            <a href="#faq" className="transition-colors hover:text-[#1F6B3A]">{t.navFaq}</a>
-          </nav>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button type="button" onClick={() => setLang(arabic ? 'en' : 'ar')}
-              aria-label={arabic ? 'Switch to English' : 'التبديل إلى العربية'}
-              className="rounded-lg border border-[#D7E5DB] bg-white px-3 py-2 text-xs font-semibold text-[#1F6B3A] hover:bg-[#F0F8F2]">
-              {t.alternate}
-            </button>
-            <Link href="/login" className="hidden rounded-lg px-3 py-2.5 text-sm font-semibold text-[#1F6B3A] hover:bg-[#F0F8F2] sm:inline-flex">{t.signIn}</Link>
-            <Link href="/register" className="hidden items-center gap-2 rounded-lg bg-[#1F6B3A] px-4 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#154E2B] sm:inline-flex">
-              {t.join}<ForwardArrow className="h-4 w-4"/>
-            </Link>
-            <button type="button" aria-expanded={menuOpen} aria-label={t.mobileMenu}
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="rounded-lg border border-[#DCE9E0] p-2 text-[#1F6B3A] md:hidden">
-              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
-        </div>
-        {menuOpen && <nav className="space-y-1 border-t border-[#E6EFE9] bg-white px-5 py-3 shadow-md md:hidden">
-          {[['#how', t.navHow], ['#benefits', t.navBenefits], ['#faq', t.navFaq], ['/login', t.signIn], ['/register', t.join]].map(([href, label]) =>
-            <a key={href} href={href} onClick={() => setMenuOpen(false)}
-              className="block rounded-lg px-3 py-3 text-sm font-semibold text-[#1F6B3A] hover:bg-[#F1F8F3]">{label}</a>)}
-        </nav>}
-      </header>
+      {menuOpen && <nav className="hv-mobile-nav" id="hv-mobile-navigation" aria-label="Mobile navigation">
+        <a onClick={closeMenu} href="#philosophy">{t.navStory}</a>
+        <a onClick={closeMenu} href="#collection">{t.navProducts}</a>
+        <a onClick={closeMenu} href="#partnership">{t.navPartner}</a>
+        <a onClick={closeMenu} href="#questions">{t.navFaq}</a>
+        <Link onClick={closeMenu} href="/login">{t.logIn}</Link>
+        <Link onClick={closeMenu} href="/register">{t.join}<ForwardArrow size={17}/></Link>
+      </nav>}
+    </header>
 
-      <section id="main" className="hv-landing-hero relative isolate overflow-hidden">
-        <div aria-hidden="true" className="hv-landing-orb hv-landing-orb-one" />
-        <div aria-hidden="true" className="hv-landing-orb hv-landing-orb-two" />
-        <div className="relative mx-auto grid max-w-[1240px] items-center gap-12 px-5 pb-20 pt-16 sm:px-8 lg:grid-cols-[1.02fr_0.98fr] lg:gap-16 lg:pb-28 lg:pt-24">
-          <div className="relative z-10 space-y-7">
-            <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#CFE3D5] bg-[#F5FBF7] px-4 py-2 text-[11px] font-bold tracking-[0.12em] text-[#1F6B3A] sm:text-xs" dir="ltr">
-              <Sparkles className="h-4 w-4 shrink-0"/>{t.eyebrow}
+    <section className="hv-hero" id="content">
+      <div className="hv-hero-rail" aria-hidden="true"><span>HERBAL VITALY</span><span>THE PARTNER JOURNAL</span><span>01 — 05</span></div>
+      <div className="hv-hero-content">
+        <Reveal className="hv-hero-copy">
+          <div className="hv-eyebrow"><span className="hv-eyebrow-line"/>{t.eyebrow}</div>
+          <h1 className="hv-display-title">{t.heroTitle1}<br/>{t.heroTitle2}<br/><em>{t.heroAccent}</em></h1>
+          <p className="hv-hero-description">{t.heroText}</p>
+          <div className="hv-action-row">
+            <a className="hv-button" href="#partnership">{t.heroCta}<ForwardArrow size={18} aria-hidden="true"/></a>
+            <a className="hv-text-link" href="#collection">{t.heroAlt}<ArrowUpRight size={18} aria-hidden="true"/></a>
+          </div>
+          <div className="hv-hero-bottom"><span>{t.issueLabel}</span><a href="#philosophy">{t.scroll}<ArrowDown size={15}/></a></div>
+        </Reveal>
+        <Reveal className="hv-hero-art" delay={120}>
+          <div className="hv-hero-art-plate">
+            <div className="hv-hero-art-arc" aria-hidden="true"/>
+            <span className="hv-art-number">HERBAL VITALY / 001</span>
+            <div className="hv-art-products">
+              <img className="hv-art-image hv-art-image--one"
+                src={products[0].image} width="370" height="370" alt="TIYNEFRET Herbal Vitaly official product packaging"
+                fetchPriority="high"/>
+              <img className="hv-art-image hv-art-image--two"
+                src={products[1].image} width="280" height="280" alt="USHABTI Herbal Vitaly official product packaging"/>
             </div>
-            <h1 className="max-w-[690px] text-[clamp(2.85rem,5.1vw,5.15rem)] font-black leading-[1.16] tracking-[-0.045em] text-[#173321]">
-              {t.hero1}<br/><span className="text-[#1F6B3A]">{t.hero2}</span>
-            </h1>
-            <p className="max-w-[590px] text-base leading-[2] text-[#52695C] sm:text-lg">{t.heroBody}</p>
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <Link href="/register" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1F6B3A] px-7 py-4 text-base font-bold text-white shadow-[0_15px_30px_rgba(31,107,58,0.18)] transition-all hover:-translate-y-0.5 hover:bg-[#164D2B]">
-                {t.heroPrimary}<ForwardArrow className="h-5 w-5"/>
-              </Link>
-              <Link href="/login" className="inline-flex items-center justify-center rounded-xl border border-[#C7DBCF] bg-white px-7 py-4 text-base font-bold text-[#1F6B3A] transition-colors hover:bg-[#F4FAF6]">
-                {t.heroSecondary}
-              </Link>
-            </div>
-            <a href="https://www.youtube.com/watch?v=1O3iYU1I-EQ" target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-3 text-sm font-semibold text-[#1F6B3A] hover:underline">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#D8E8DE] bg-white shadow-sm"><PlayCircle className="h-5 w-5"/></span>
-              <span>{t.guide}<span className="mt-0.5 block text-xs font-normal text-[#839489]">{t.guideTime}</span></span>
+            <div className="hv-art-caption"><span className="hv-art-caption-mark">HV.</span><span>{t.imageCaption}</span></div>
+            <span className="hv-art-vertical" aria-hidden="true">{t.heroIndex}</span>
+          </div>
+        </Reveal>
+      </div>
+      <div className="hv-hero-footline" aria-hidden="true" />
+    </section>
+
+    <div className="hv-editorial-marquee" aria-label="Herbal Vitaly values">
+      {[t.strip1,t.strip2,t.strip3].map((label,i)=><div key={label} className="hv-marquee-item"><span className="hv-asterisk" aria-hidden="true">✳</span><span>{label}</span>{i!==2 && <span className="hv-marquee-rule" aria-hidden="true"/>}</div>)}
+    </div>
+
+    <section className="hv-section hv-philosophy" id="philosophy">
+      <div className="hv-section-marker">{t.philosophyIndex}<span className="hv-marker-rule"/></div>
+      <div className="hv-philosophy-grid">
+        <Reveal className="hv-section-lead">
+          <span className="hv-kicker">{t.philosophyTag}</span>
+          <h2 className="hv-heading hv-heading--editorial">{t.philosophyTitle}</h2>
+        </Reveal>
+        <Reveal className="hv-philosophy-right" delay={100}>
+          <p className="hv-big-paragraph">{t.philosophyText}</p>
+          <a href="https://herbalvitaly.com" target="_blank" rel="noopener noreferrer" className="hv-text-link">
+            {t.philosophyLink}<ArrowUpRight size={18} aria-hidden="true"/>
+          </a>
+          <div className="hv-philosophy-notes">
+            <div><Sparkles size={25} aria-hidden="true"/><span>{t.philosophyCardA}</span></div>
+            <div><HeartHandshake size={25} aria-hidden="true"/><span>{t.philosophyCardB}</span></div>
+          </div>
+        </Reveal>
+      </div>
+      <Reveal className="hv-philosophy-quote">
+        <span aria-hidden="true" className="hv-quote-mark">“</span>
+        <blockquote>{t.philosophyQuote}</blockquote>
+        <span>{t.philosophySmall}</span>
+      </Reveal>
+    </section>
+
+    <section className="hv-section hv-collection" id="collection">
+      <div className="hv-section-marker">{t.productsIndex}<span className="hv-marker-rule"/></div>
+      <Reveal className="hv-section-intro">
+        <div>
+          <span className="hv-kicker">{t.productsTag}</span>
+          <h2 className="hv-heading">{t.productsTitle}</h2>
+        </div>
+        <p>{t.productsText}</p>
+      </Reveal>
+      <div className="hv-collection-tabs" role="group" aria-label="Product categories">
+        {collections.map((item,i)=><button type="button" key={item}
+          aria-pressed={activeCollection===item}
+          className={`hv-collection-tab ${activeCollection===item?'hv-collection-tab--active':''}`}
+          onClick={()=>setActiveCollection(item)}>
+          <span className="hv-tab-number">0{i+1}</span>{t.productsTabs[item]}
+        </button>)}
+      </div>
+      <div className="hv-product-grid" aria-live="polite">
+        {displayedProducts.map((product,i)=><article key={product.id} className="hv-product-card" data-tone={product.color}>
+          <div className="hv-product-image-wrap">
+            <span className="hv-product-index">HV / 0{i+1}</span>
+            <a href={product.url} target="_blank" rel="noopener noreferrer" aria-label={`${t.viewProduct}: ${product.name}`}>
+              <img src={product.image} alt={`${product.name} — official Herbal Vitaly product image`} loading="lazy" width="430" height="430" />
             </a>
-            <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-[#DBE7DE] pt-6 text-xs font-semibold text-[#546E5D]">
-              {[t.trust1, t.trust2, t.trust3].map(x => <span key={x} className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-[#1F6B3A]"/>{x}</span>)}
+            <span className="hv-product-category">{arabic?product.arabicCategory:product.category}</span>
+          </div>
+          <div className="hv-product-card-meta">
+            <div><h3>{product.name}</h3><p>{arabic?product.arabicDescription:product.description}</p></div>
+            <a href={product.url} target="_blank" rel="noopener noreferrer"
+              aria-label={`${t.viewProduct}: ${product.name}`}><ArrowUpRight size={21} aria-hidden="true"/></a>
+          </div>
+        </article>)}
+      </div>
+      <div className="hv-collection-footer">
+        <p>{t.productNotice}</p>
+        <a href="https://herbalvitaly.com/collections/all" target="_blank" rel="noopener noreferrer" className="hv-text-link">{t.collectionLink}<ArrowUpRight size={18}/></a>
+      </div>
+    </section>
+
+    <section className="hv-partnership" id="partnership">
+      <div className="hv-partnership-shell">
+        <div className="hv-section-marker hv-section-marker--light">{t.partnerIndex}<span className="hv-marker-rule"/></div>
+        <div className="hv-partnership-grid">
+          <Reveal className="hv-partnership-copy">
+            <span className="hv-kicker hv-kicker--light">{t.partnerTag}</span>
+            <h2 className="hv-partnership-heading">{t.partnerTitle1}<br/>{t.partnerTitle2}<br/><em>{t.partnerTitle3}</em></h2>
+            <p>{t.partnerText}</p>
+            <div className="hv-action-row">
+              <Link href="/register" className="hv-button hv-button--light">{t.partnerPrimary}<ForwardArrow size={18}/></Link>
+              <a className="hv-video-link" href="https://www.youtube.com/watch?v=1O3iYU1I-EQ" target="_blank" rel="noopener noreferrer"><Play size={15}/>{t.partnerVideo}</a>
             </div>
-          </div>
-
-          <div className="relative mx-auto w-full max-w-[545px]" dir="ltr">
-            <div className="absolute -inset-5 -z-10 rounded-[2.5rem] border border-[#E5EFE8] bg-white/60 shadow-[0_25px_90px_rgba(31,107,58,0.07)]"/>
-            <div className="overflow-hidden rounded-[1.65rem] border border-[#DCE9DF] bg-white shadow-[0_30px_100px_rgba(15,61,35,0.13)]">
-              <div className="flex items-center justify-between border-b border-[#E8F0EA] bg-[#F8FCF9] px-6 py-4">
-                <div className="flex items-center gap-2 text-sm font-bold text-[#1F6B3A]"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1F6B3A] text-white"><BarChart3 className="h-4 w-4"/></span>Partner Workspace</div>
-                <span className="rounded-full border border-[#CDE4D4] bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[#1F6B3A]">{t.previewTag}</span>
-              </div>
-              <div className="space-y-5 p-5 sm:p-7">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#72907C]">{t.previewEyebrow}</p>
-                  <h2 className="text-xl font-extrabold text-[#183B25]">{t.previewTitle}</h2>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-[1.25fr_0.75fr]">
-                  <div className="rounded-2xl bg-gradient-to-br from-[#1F6B3A] to-[#133D25] p-5 text-white">
-                    <div className="flex items-center justify-between gap-2 text-xs text-white/80"><span>{t.previewCode}</span><TicketPercent className="h-5 w-5"/></div>
-                    <p className="mt-4 font-mono text-3xl font-bold tracking-[0.18em]">YOURCODE</p>
-                    <p className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-medium text-white/90"><BadgeCheck className="h-3.5 w-3.5"/>{t.previewSample}</p>
-                  </div>
-                  <div className="flex flex-col justify-center gap-3 rounded-2xl border border-[#E3EEE7] bg-[#F8FBF9] p-4">
-                    <div className="flex items-center gap-2 text-[#1F6B3A]"><Link2 className="h-5 w-5"/><span className="text-xs font-bold">{t.previewLinks}</span></div>
-                    <div className="h-2.5 w-full rounded-full bg-[#DBEDE1]"/><div className="h-2.5 w-3/4 rounded-full bg-[#DBEDE1]"/><div className="h-2.5 w-5/6 rounded-full bg-[#DBEDE1]"/>
-                  </div>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="flex items-center gap-3 rounded-xl border border-[#E3EEE7] bg-white p-4"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F0F7F2] text-[#1F6B3A]"><PackageCheck className="h-5 w-5"/></span><span className="text-xs font-bold text-[#3B5946]">{t.previewTracking}</span><Check className="ml-auto h-4 w-4 text-[#1F6B3A]"/></div>
-                  <div className="flex items-center gap-3 rounded-xl border border-[#E3EEE7] bg-white p-4"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F0F7F2] text-[#1F6B3A]"><Wallet className="h-5 w-5"/></span><span className="text-xs font-bold text-[#3B5946]">{t.previewCommission}</span><Check className="ml-auto h-4 w-4 text-[#1F6B3A]"/></div>
-                </div>
-                <div className="rounded-2xl border border-[#E3EEE7] p-4">
-                  <p className="mb-3 text-xs font-bold text-[#47654F]">{t.previewProducts}</p>
-                  <div className="space-y-2">
-                    {[t.previewProduct1,t.previewProduct2].map((x,i) => <div key={x} className="flex items-center gap-3 rounded-lg bg-[#F7FAF8] px-3 py-2.5">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#E0EAE3] bg-white text-[#1F6B3A]"><Gift className="h-4 w-4"/></span>
-                      <span className="flex-1 text-xs font-semibold text-[#294B34]">{x}</span>
-                      <span className="font-mono text-[10px] text-[#708C79]">0{i+1}</span>
-                      <ArrowUpRight className="h-4 w-4 text-[#1F6B3A]"/>
-                    </div>)}
-                  </div>
-                </div>
-              </div>
+            <small>{t.partnerVideoNote}</small>
+          </Reveal>
+          <Reveal className="hv-workspace" delay={110}>
+            <div className="hv-workspace-header"><span className="hv-workspace-dot"/><span>{t.workspace}</span><span aria-hidden="true">↗</span></div>
+            <div className="hv-workspace-content">
+              <p className="hv-workspace-sub">{t.workspaceSub}</p>
+              {t.workspaceItems.map((item,i)=>{
+                const Icon=benefitsIcons[i];
+                return <div key={item.title} className="hv-workspace-row">
+                  <span className="hv-workspace-number">0{i+1}</span>
+                  <span className="hv-workspace-row-text"><strong>{item.title}</strong><small>{item.sub}</small></span>
+                  <Icon size={20} aria-hidden="true"/>
+                </div>;
+              })}
+              <p className="hv-workspace-disclaimer">{t.workspaceFoot}</p>
             </div>
-            <div aria-hidden="true" className="absolute -bottom-7 -left-8 -z-20 h-28 w-28 rounded-[2rem] bg-[#DFF1E4] blur-2xl"/>
-          </div>
+          </Reveal>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section id="benefits" className="scroll-mt-24 bg-white px-5 py-20 sm:px-8 lg:py-28">
-        <div className="mx-auto max-w-[1240px]">
-          <div className="mb-12 max-w-[720px]">
-            <p className="mb-4 text-xs font-extrabold uppercase tracking-[0.2em] text-[#1F6B3A]">{t.featuresEyebrow}</p>
-            <h2 className="text-3xl font-extrabold leading-[1.4] tracking-[-0.03em] text-[#173321] sm:text-4xl">{t.featuresTitle}</h2>
-            <p className="mt-4 text-base leading-8 text-[#657C6B]">{t.featuresBody}</p>
-          </div>
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {t.features.map((feature,i) => {
-              const Icon = featureIcons[i];
-              return <div key={feature.title} className="group rounded-[1.4rem] border border-[#E0EBE4] bg-white p-7 shadow-[0_12px_28px_rgba(20,80,40,0.035)] transition-all hover:-translate-y-1 hover:border-[#BFDAC7] hover:shadow-[0_20px_40px_rgba(20,80,40,0.09)]">
-                <span className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EDF8F0] p-3.5 text-[#1F6B3A]"><Icon className="h-6 w-6"/></span>
-                <h3 className="text-lg font-bold text-[#173321]">{feature.title}</h3>
-                <p className="mt-3 text-sm leading-8 text-[#687E6E]">{feature.description}</p>
-              </div>;
-            })}
-          </div>
-        </div>
-      </section>
+    <section className="hv-section hv-process" id="how">
+      <Reveal className="hv-process-head"><span className="hv-kicker">THE METHOD / 001 — 003</span><h2 className="hv-heading">{t.stepTitle}</h2></Reveal>
+      <div className="hv-process-grid">
+        {t.steps.map((step,i)=><Reveal key={step.label} className="hv-process-step" delay={i*70}>
+          <span className="hv-process-number">0{i+1}</span>
+          <div className="hv-process-line" aria-hidden="true"><span/></div>
+          <h3>{step.label}</h3>
+          <p>{step.description}</p>
+        </Reveal>)}
+      </div>
+    </section>
 
-      <section id="how" className="scroll-mt-24 border-y border-[#E6F0E9] bg-[#F7FBF8] px-5 py-20 sm:px-8 lg:py-28">
-        <div className="mx-auto max-w-[1240px]">
-          <div className="mx-auto mb-14 max-w-[680px] text-center">
-            <p className="mb-4 text-xs font-extrabold uppercase tracking-[0.2em] text-[#1F6B3A]">{t.stepsEyebrow}</p>
-            <h2 className="text-3xl font-extrabold leading-[1.4] sm:text-4xl">{t.stepsTitle}</h2>
+    <section className="hv-voices">
+      <div className="hv-voices-inner">
+        <Reveal className="hv-voices-text">
+          <div className="hv-section-marker">{t.voicesIndex}<span className="hv-marker-rule"/></div>
+          <span className="hv-kicker">{t.voicesTag}</span>
+          <h2 className="hv-heading hv-heading--editorial">{t.voicesTitle}</h2>
+          <p>{t.voicesText}</p>
+          <small><ShieldCheck size={16}/>{t.voicesNote}</small>
+        </Reveal>
+        <Reveal className="hv-voices-art" delay={120}>
+          <div className="hv-voices-shape" aria-hidden="true"/>
+          <div className="hv-voices-art-inner">
+            <div className="hv-voices-art-seal"><BadgeCheck size={28}/><span>HERBAL<br/>VITALY</span></div>
+            <span className="hv-voices-art-type">PEOPLE FIRST.<br/><em>ALWAYS.</em></span>
+            <span className="hv-voices-art-foot">NATURE / PURPOSE / COMMUNITY</span>
           </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            {t.steps.map((item,i)=>{
-              const Icon=stepIcons[i];
-              return <div className="relative rounded-[1.5rem] border border-[#E0EBE4] bg-white p-8 shadow-sm" key={item.title}>
-                <div className="mb-8 flex items-center justify-between">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#1F6B3A] text-white"><Icon className="h-6 w-6"/></span>
-                  <span className="text-4xl font-black text-[#E1EDE5]">0{i+1}</span>
-                </div>
-                <h3 className="text-lg font-extrabold">{item.title}</h3>
-                <p className="mt-3 text-sm leading-8 text-[#697E70]">{item.description}</p>
-              </div>;
-            })}
-          </div>
-        </div>
-      </section>
+        </Reveal>
+      </div>
+    </section>
 
-      <section className="px-5 py-20 sm:px-8 lg:py-28">
-        <div className="mx-auto grid max-w-[1240px] gap-10 overflow-hidden rounded-[2rem] border border-[#DAE9DE] bg-[#F9FCFA] p-8 sm:p-12 lg:grid-cols-[1fr_0.8fr] lg:items-center lg:p-16">
-          <div>
-            <p className="mb-4 text-xs font-extrabold uppercase tracking-widest text-[#1F6B3A]">{t.whoEyebrow}</p>
-            <h2 className="max-w-[660px] text-3xl font-extrabold leading-[1.4] sm:text-4xl">{t.whoTitle}</h2>
-            <p className="mt-5 max-w-[650px] text-base leading-8 text-[#6A8070]">{t.whoBody}</p>
-            <p className="mt-5 flex items-start gap-2 text-xs leading-6 text-[#698271]"><ShieldCheck className="mt-1 h-4 w-4 shrink-0 text-[#1F6B3A]"/>{t.whoNote}</p>
-            <a href="https://herbalvitaly.com" target="_blank" rel="noopener noreferrer"
-              className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-[#1F6B3A] hover:underline">
-              {t.explore}<ArrowUpRight className="h-4 w-4"/>
-            </a>
-          </div>
-          <div className="relative mx-auto flex aspect-[1.1] w-full max-w-[420px] items-center justify-center">
-            <div aria-hidden="true" className="absolute inset-8 rounded-full border-[35px] border-[#DDEEE2]"/>
-            <div aria-hidden="true" className="absolute inset-20 rounded-full border border-[#8AB99A]/35"/>
-            <div className="relative flex h-52 w-52 items-center justify-center rounded-[2.8rem] border border-[#D6E8DC] bg-white shadow-[0_26px_55px_rgba(22,84,44,0.12)]">
-              <span className="absolute -right-7 -top-7 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#1F6B3A] text-white shadow-lg"><HeartHandshake className="h-8 w-8"/></span>
-              <img src={HERBAL_VITALY.logo} alt="Herbal Vitaly" width={180} height={120} className="h-32 w-36 object-contain"/>
-              <span className="absolute -bottom-5 -left-7 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#DCE9E0] bg-white text-[#1F6B3A] shadow-lg"><Sparkles className="h-7 w-7"/></span>
-            </div>
-          </div>
+    <section className="hv-section hv-faq" id="questions">
+      <div className="hv-section-marker">{t.faqIndex}<span className="hv-marker-rule"/></div>
+      <div className="hv-faq-grid">
+        <Reveal className="hv-faq-lead"><span className="hv-kicker">{t.faqTag}</span><h2 className="hv-heading">{t.faqTitle}</h2></Reveal>
+        <div className="hv-faq-list">
+          {t.faqs.map((item,i)=><details key={item.q} className="hv-faq-item">
+            <summary><span className="hv-faq-number">0{i+1}</span><span>{item.q}</span><ChevronDown size={20}/></summary>
+            <div className="hv-faq-answer"><p>{item.a}</p></div>
+          </details>)}
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section id="faq" className="scroll-mt-24 border-t border-[#E6F0E9] bg-white px-5 py-20 sm:px-8 lg:py-28">
-        <div className="mx-auto max-w-[930px]">
-          <div className="mb-12 text-center">
-            <p className="mb-4 inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest text-[#1F6B3A]"><CircleHelp className="h-4 w-4"/>{t.faqEyebrow}</p>
-            <h2 className="text-3xl font-extrabold sm:text-4xl">{t.faqTitle}</h2>
-          </div>
-          <div className="space-y-3">
-            {t.faqs.map((entry,i)=><details key={entry.q} className="group rounded-2xl border border-[#E1EBE4] bg-white px-6 py-5 open:border-[#BFDAC8] open:bg-[#FBFDFB]">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold marker:hidden sm:text-base">
-                {entry.q}<ChevronDown className="h-5 w-5 shrink-0 text-[#1F6B3A] transition-transform group-open:rotate-180"/>
-              </summary>
-              <p className="pt-4 text-sm leading-8 text-[#607869]">{entry.a}</p>
-            </details>)}
-          </div>
+    <section className="hv-final-cta">
+      <Reveal className="hv-final-inner">
+        <span className="hv-kicker">{t.finalIndex}</span>
+        <h2>{t.finalHeadline}</h2>
+        <p>{t.finalBody}</p>
+        <div className="hv-final-actions">
+          <Link href="/register" className="hv-button">{t.finalCta}<ForwardArrow size={18}/></Link>
+          <Link href="/login" className="hv-text-link">{t.finalLogin}<ArrowUpRight size={18}/></Link>
         </div>
-      </section>
+      </Reveal>
+      <div className="hv-final-monogram" aria-hidden="true">HV</div>
+    </section>
 
-      <section className="px-5 pb-20 pt-8 sm:px-8 lg:pb-24">
-        <div className="relative mx-auto max-w-[1240px] overflow-hidden rounded-[2rem] bg-[#15482B] px-7 py-16 text-center text-white sm:px-14 sm:py-20">
-          <div aria-hidden="true" className="absolute -left-24 -top-28 h-80 w-80 rounded-full border-[50px] border-white/[0.045]"/>
-          <div aria-hidden="true" className="absolute -bottom-36 -right-14 h-96 w-96 rounded-full border-[55px] border-white/[0.045]"/>
-          <div className="relative z-10">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#B3D8BE]" dir="ltr">{t.bottomEyebrow}</p>
-            <h2 className="mx-auto mt-5 max-w-[810px] text-3xl font-extrabold leading-[1.35] sm:text-5xl">{t.bottomTitle}</h2>
-            <p className="mx-auto mt-5 max-w-[620px] text-sm leading-8 text-[#D6EADB] sm:text-base">{t.bottomBody}</p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-              <Link href="/register" className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-7 py-4 text-sm font-extrabold text-[#1F6B3A] transition-colors hover:bg-[#EAF5ED]">{t.bottomCta}<ForwardArrow className="h-4 w-4"/></Link>
-              <Link href="/login" className="inline-flex items-center justify-center px-5 py-3 text-sm font-semibold text-white underline-offset-4 hover:underline">{t.bottomLogin}</Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <footer className="border-t border-[#E3ECE6] bg-[#FBFDFC] px-5 pb-8 pt-14 sm:px-8">
-        <div className="mx-auto grid max-w-[1240px] gap-10 md:grid-cols-[1.6fr_1fr_1fr]">
-          <div className="max-w-sm">
-            <Logo small />
-            <p className="mt-4 text-sm italic text-[#1F6B3A]" dir="ltr">{t.footerTag}</p>
-            <p className="mt-3 text-sm leading-7 text-[#6E8374]">{t.footerAbout}</p>
-          </div>
-          <div>
-            <h3 className="mb-5 text-sm font-bold text-[#173321]">{t.footerLinks}</h3>
-            <div className="flex flex-col items-start gap-3 text-sm text-[#657F6D]">
-              <a href="#how" className="hover:text-[#1F6B3A]">{t.navHow}</a>
-              <a href="#faq" className="hover:text-[#1F6B3A]">{t.navFaq}</a>
-              <Link href="/privacy" className="hover:text-[#1F6B3A]">{t.footerPrivacy}</Link>
-              <Link href="/terms" className="hover:text-[#1F6B3A]">{t.footerTerms}</Link>
-            </div>
-          </div>
-          <div>
-            <h3 className="mb-5 text-sm font-bold">{t.footerContact}</h3>
-            <div className="flex flex-col items-start gap-4 text-sm text-[#657F6D]">
-              <a href="mailto:contact@herbalvitaly.com" dir="ltr" className="inline-flex items-center gap-2 hover:text-[#1F6B3A]"><Mail className="h-4 w-4"/>contact@herbalvitaly.com</a>
-              <a href="https://herbalvitaly.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 hover:text-[#1F6B3A]"><ArrowUpRight className="h-4 w-4"/>herbalvitaly.com</a>
-            </div>
-          </div>
-        </div>
-        <div className="mx-auto mt-12 flex max-w-[1240px] flex-col justify-between gap-3 border-t border-[#E5EDE7] pt-6 text-xs text-[#8A9E8E] sm:flex-row">
-          <p>© 2026 Herbal Vitaly. {t.footerRights}</p>
-          <p>{t.footerNotice}</p>
-        </div>
-      </footer>
-    </main>
-  );
+    <footer className="hv-footer">
+      <div className="hv-footer-top">
+        <div className="hv-footer-brand"><Link href="/" aria-label="Home"><BrandLogo small/></Link>
+          <p>{t.footerTagline}</p><small>{t.footerNote}</small></div>
+        <div className="hv-footer-col"><h3>{t.footerExplore}</h3>
+          <a href="#philosophy">{t.navStory}</a><a href="#collection">{t.navProducts}</a>
+          <a href="#partnership">{t.navPartner}</a><a href="https://herbalvitaly.com" target="_blank" rel="noopener noreferrer">{t.footerStore}</a></div>
+        <div className="hv-footer-col"><h3>{t.footerAccount}</h3>
+          <Link href="/register">{t.join}</Link><Link href="/login">{t.logIn}</Link>
+          <Link href="/privacy">{t.footerPrivacy}</Link><Link href="/terms">{t.footerTerms}</Link></div>
+        <div className="hv-footer-col"><h3>{t.footerContact}</h3>
+          <a href="mailto:contact@herbalvitaly.com">contact@herbalvitaly.com</a>
+          <a href="https://herbalvitaly.com" target="_blank" rel="noopener noreferrer">herbalvitaly.com<ArrowUpRight size={13}/></a>
+          <a href="https://www.youtube.com/watch?v=1O3iYU1I-EQ" target="_blank" rel="noopener noreferrer">{t.partnerVideo}<ArrowUpRight size={13}/></a></div>
+      </div>
+      <div className="hv-footer-bottom"><span>{t.footerRights}</span><span>{t.footerDisclaimer}</span></div>
+    </footer>
+  </main>;
 }
