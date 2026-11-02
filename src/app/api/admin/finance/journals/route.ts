@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   if (process.env.VERCEL_ENV !== 'preview' ||
       process.env.HV_NATIVE_ACCOUNTING_SCHEMA_READY !== 'true' ||
+      process.env.HV_NATIVE_ACCOUNTING_STAGING_DATABASE_VERIFIED !== 'true' ||
       process.env.HV_NATIVE_ACCOUNTING_DRAFTS_ENABLED !== 'true') {
     return NextResponse.json({ error: 'Accounting draft writes are disabled outside approved Preview staging' }, { status: 423 });
   }
