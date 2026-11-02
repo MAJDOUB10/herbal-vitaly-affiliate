@@ -1,5 +1,23 @@
 # Herbal Vitaly Native Accounting — Production Release Plan
 
+> **Execution note — 2 November 2026:** Native ledger tables were created successfully
+> on Neon branch `production-herbal-vitaly-20261031` after a test on
+> `ugc-crm-migration-validation-20261101`. All four accounting tables were empty
+> following deployment; the existing users count remained 17. A non-compute
+> copy named `backup-pre-finance-20261102` was created before the change.
+> Neon did not allow marking that backup protected under the current plan.
+>
+> **Not yet finished:** We have NOT verified the Vercel Production
+> `DATABASE_URL` maps to this Neon branch. No `HV_NATIVE_ACCOUNTING_*`
+> activation flags were set in Vercel, no account chart, supplier data,
+> opening balances, tax rules, invoices or journals were loaded, and no
+> financial posting was enabled. The existing Neon schema has no
+> `_prisma_migrations` table. The executed DDL is stored at
+> `docs/sql/native-accounting-foundation-20261102.sql` rather than as an
+> auto-replayed Prisma migration. Before any future `prisma migrate deploy`,
+> establish and validate a baseline using official Prisma procedures.
+>
+
 **Decision:** A native accounting module inside `partner.herbalvitaly.com` using Next.js 16,
 Prisma/PostgreSQL (Neon), Vercel, and EGP. **No Bigcapital or Railway required.**
 
