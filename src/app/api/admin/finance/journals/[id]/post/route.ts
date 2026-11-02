@@ -61,17 +61,17 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       const period = await tx.hvGlPeriod.findUnique({ where: { year_month: { year, month } } });
       if (!period || period.isClosed) throw new PostingError('Period is absent or closed', 409);
 
-      let totalDebits = 0n, totalCredits = 0n;
+      let totalDebits = BigInt(0), totalCredits = BigInt(0);
       for (const line of j.lines) {
-        if (!line.account.isActive || line.debitPiasters < 0n || line.creditPiasters < 0n ||
-          (line.debitPiasters === 0n && line.creditPiasters === 0n) ||
-          (line.debitPiasters > 0n && line.creditPiasters > 0n)) {
+        if (!line.account.isActive || line.debitPiasters < BigInt(0) || line.creditPiasters < BigInt(0) ||
+          (line.debitPiasters === BigInt(0) && line.creditPiasters === BigInt(0)) ||
+          (line.debitPiasters > BigInt(0) && line.creditPiasters > BigInt(0))) {
           throw new PostingError('Inactive account or invalid debit/credit line', 422);
         }
         totalDebits += line.debitPiasters;
         totalCredits += line.creditPiasters;
       }
-      if (totalDebits === 0n || totalDebits !== totalCredits) {
+      if (totalDebits === BigInt(0) || totalDebits !== totalCredits) {
         throw new PostingError('Unbalanced journal cannot be posted', 422);
       }
       const changed = await tx.hvGlJournal.updateMany({
