@@ -944,3 +944,69 @@ model HvGlPeriod {
   @@unique([year, month])
   @@map("hv_gl_periods")
 }
+
+
+// ────────────────────────────────────────────────────────────────
+// Company finance source documents. Not the Refferq affiliate Invoice.
+// DRAFT means non-posted, non-fiscal, non-payable. This module does not
+// send payment instructions or issue Egyptian tax invoices.
+// ────────────────────────────────────────────────────────────────
+
+model HvFinanceParty {
+  id             String               @id @default(cuid())
+  name           String               @db.VarChar(200)
+  kind           String               @db.VarChar(24) // SUPPLIER | CUSTOMER | BOTH
+  taxId          String?              @db.VarChar(50)
+  email          String?              @db.VarChar(200)
+  phone          String?              @db.VarChar(80)
+  isActive       Boolean              @default(true)
+  createdBy      String               @db.VarChar(80)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  documents      HvFinanceDocument[]
+
+  @@index([kind, isActive])
+  @@map("hv_finance_parties")
+}
+
+model HvFinanceDocument {
+  id             String                   @id @default(cuid())
+  number         String                   @unique @db.VarChar(80)
+  idempotencyKey String                   @unique @db.VarChar(160)
+  kind           String                   @db.VarChar(32) // SUPPLIER_BILL | CUSTOMER_INVOICE | EXPENSE | CREDIT_NOTE
+  status         String                   @default("DRAFT") @db.VarChar(24)
+  description    String                   @db.VarChar(500)
+  counterpartyId String?
+  counterparty   HvFinanceParty?          @relation(fields: [counterpartyId], references: [id], onDelete: Restrict)
+  documentDate   DateTime                 @db.Date
+  dueDate        DateTime?                @db.Date
+  currency       String                   @default("EGP") @db.VarChar(3)
+  subtotalPiasters BigInt
+  taxPiasters    BigInt                   @default(0)
+  totalPiasters  BigInt
+  externalRef    String?                  @db.VarChar(160)
+  source         String                   @default("MANUAL_DRAFT") @db.VarChar(60)
+  createdBy      String                   @db.VarChar(80)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  lines          HvFinanceDocumentLine[]
+
+  @@index([kind, documentDate])
+  @@index([counterpartyId, status])
+  @@map("hv_finance_documents")
+}
+
+model HvFinanceDocumentLine {
+  id             String            @id @default(cuid())
+  documentId     String
+  document       HvFinanceDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  lineNumber     Int
+  description    String            @db.VarChar(350)
+  sku            String?           @db.VarChar(120)
+  netPiasters    BigInt
+  taxPiasters    BigInt            @default(0)
+  taxCode        String?           @db.VarChar(40)
+
+  @@unique([documentId, lineNumber])
+  @@map("hv_finance_document_lines")
+}
