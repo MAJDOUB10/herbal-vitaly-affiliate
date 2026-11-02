@@ -63,6 +63,7 @@ export default function FinanceAccountingPage() {
   const [days, setDays] = useState(30);
   const [refresh, setRefresh] = useState(0);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [erpStatus, setErpStatus] = useState<'CHECKING' | 'NOT_CONFIGURED' | 'CONFIGURED_UNVERIFIED' | 'ERROR'>('CHECKING');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -83,6 +84,22 @@ export default function FinanceAccountingPage() {
     });
     return () => controller.abort();
   }, [days, refresh]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setErpStatus('CHECKING');
+    fetch('/api/admin/finance/bigcapital/status', {
+      cache: 'no-store', signal: controller.signal,
+    }).then(async response => {
+      const json = await response.json();
+      if (!response.ok || json.success !== true) throw new Error('ERP status unavailable');
+      if (!controller.signal.aborted) setErpStatus(json.status === 'CONFIGURED_UNVERIFIED'
+        ? 'CONFIGURED_UNVERIFIED' : 'NOT_CONFIGURED');
+    }).catch(() => {
+      if (!controller.signal.aborted) setErpStatus('ERROR');
+    });
+    return () => controller.abort();
+  }, [refresh]);
 
   const data = snapshot?.operational;
 
@@ -114,6 +131,19 @@ export default function FinanceAccountingPage() {
           </button>
         </div>
       </header>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#E4EBE6] bg-white p-4 text-sm">
+        <div className="flex items-center gap-2 text-[#173621]">
+          <Landmark className="h-5 w-5 text-[#1F6B3A]" />
+          <span className="font-semibold">Bigcapital ERP connection</span>
+        </div>
+        <div role="status" className="font-medium text-slate-600">
+          {erpStatus === 'CHECKING' ? 'Checking configuration…' :
+            erpStatus === 'CONFIGURED_UNVERIFIED' ? 'Credentials configured — connection unverified' :
+            erpStatus === 'NOT_CONFIGURED' ? 'Server and credentials not configured' :
+            'Status unavailable'}
+        </div>
+      </div>
 
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
         <div className="flex items-start gap-2">
