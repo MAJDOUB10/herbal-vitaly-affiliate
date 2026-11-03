@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { validateDiscountCode, getShopifyCouponTargets, getShopifyProducts, trackedAffiliateLandingLink } from '@/lib/hv-shopify-discounts';
+import { validateDiscountCode, getShopifyCouponTargets, getShopifyProducts, affiliateLandingPageLink, trackedAffiliateLandingLink } from '@/lib/hv-shopify-discounts';
 
 /** Read-only approved partner discounts, scoped to the authenticated account. */
 export async function GET(request: NextRequest) {
@@ -40,12 +40,22 @@ export async function GET(request: NextRequest) {
         discountValue: c.discountValue, scope: target.scope,
         products: productList.map(p => ({
           handle: p.handle, title: p.title, productUrl: p.url,
+          // Partners requested the short, directly shareable Shopify landing
+          // URL with their OWN live discount code, not the tracking redirect
+          // and not demonstration values such as TEST15 or hvTEST15.
           affiliateLink: ['tiynefret', 'ushabti'].includes(p.handle)
-            ? trackedAffiliateLandingLink(user.affiliate!.referralCode, c.code, p.handle)
+            ? affiliateLandingPageLink(c.code, p.handle)
             : 'https://partner.herbalvitaly.com/r/' +
                 encodeURIComponent(user.affiliate!.referralCode) +
                 '?dest=' + encodeURIComponent(p.url) +
                 '&promo=' + encodeURIComponent(c.code),
+          // Optional click-attributed alternative. Opening this redirects to
+          // the identical Shopify landing page and preserves signed tracking.
+          // Direct URLs are still eligible for coupon-code order matching,
+          // but do not record the Refferq /r click event.
+          trackedLink: ['tiynefret', 'ushabti'].includes(p.handle)
+            ? trackedAffiliateLandingLink(user.affiliate!.referralCode, c.code, p.handle)
+            : null,
         })),
       }];
     });
