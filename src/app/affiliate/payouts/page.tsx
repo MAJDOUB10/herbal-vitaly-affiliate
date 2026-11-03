@@ -21,7 +21,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  IndianRupee,
   Clock,
   CheckCircle2,
   Ban,
@@ -46,7 +45,7 @@ export default function PayoutsPage() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [balance, setBalance] = useState(0);
-  const [currencySymbol, setCurrencySymbol] = useState('₹');
+  const currencySymbol = 'EGP';
 
   useEffect(() => {
     if (!authLoading && user) fetchPayouts();
@@ -64,7 +63,7 @@ export default function PayoutsPage() {
       if (payData.success) setPayouts(payData.payouts || []);
       if (profileData.success) {
         setBalance(profileData.affiliate?.balanceCents || 0);
-        setCurrencySymbol(profileData.currencySymbol || '₹');
+        // EGP is the display denomination for Herbal Vitaly Egypt.
       }
     } catch (error) {
       console.error('Failed to fetch payouts:', error);
@@ -74,10 +73,10 @@ export default function PayoutsPage() {
   };
 
   const formatDate = (date: string) =>
-    new Date(date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+    new Date(date).toLocaleDateString('en-EG', { year: 'numeric', month: 'short', day: 'numeric' });
 
   const formatCurrency = (cents: number) =>
-    `${currencySymbol}${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    (cents / 100).toLocaleString('en-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' EGP';
 
   const getStatusBadge = (status: string) => {
     const map: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ElementType }> = {
@@ -96,7 +95,7 @@ export default function PayoutsPage() {
     );
   };
 
-  const totalPaid = payouts.filter((p) => p.status === 'COMPLETED').reduce((sum, p) => sum + p.amount, 0);
+  const totalPaid = payouts.filter((p) => (p.status === 'COMPLETED' || p.status === 'PAID')).reduce((sum, p) => sum + p.amount, 0);
   const pendingPayout = payouts.filter((p) => p.status === 'PENDING').reduce((sum, p) => sum + p.amount, 0);
 
   const exportCSV = () => {
@@ -206,7 +205,7 @@ export default function PayoutsPage() {
           <div>
             <p className="text-sm font-medium text-blue-900">Payout Schedule</p>
             <p className="text-sm text-blue-700">
-              Payouts are processed on the 1st of each month for the previous month&apos;s earnings. Minimum payout threshold is {currencySymbol}1,000.
+              Payout amounts become eligible only after delivery, verified collection, reconciliation and financial approval. Processing dates and any applicable minimum payout follow the current partner terms.
             </p>
           </div>
         </CardContent>

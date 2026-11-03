@@ -77,12 +77,36 @@ export async function GET(request: NextRequest) {
             (affiliateFilter ? { affiliateId: affiliateFilter } : {})),
         }}),
       ]);
+
+    // Exact server-side financial and operational aggregates. The 2,000-row
+    // display limit must never truncate the cards shown to partners.
+    const clean = { refunded: false, cancelled: false };
+    const egpScope: Prisma.HvCodOrderWhereInput = { ...orderWhere, currency: 'EGP' };
+    const previousStart = new Date(from.getTime() - days * 86400_000);
+    const [valueAll, valueDelivered, valueCollected, deliveredCount,
+      pendingCount, returnedCount, cancelledCount, settledCount, previousValue] =
+      await Promise.all([
+        prisma.hvCodOrder.aggregate({ where: egpScope, _sum: { orderTotalPiasters: true } }),
+        prisma.hvCodOrder.aggregate({ where: { ...egpScope, ...clean, delivered: true },
+          _sum: { orderTotalPiasters: true } }),
+        prisma.hvCodOrder.aggregate({ where: { ...egpScope, ...clean,
+          delivered: true, merchantReconciled: true }, _sum: { collectedPiasters: true } }),
+        prisma.hvCodOrder.count({ where: { ...orderWhere, ...clean, delivered: true } }),
+        prisma.hvCodOrder.count({ where: { ...orderWhere, ...clean, delivered: false } }),
+        prisma.hvCodOrder.count({ where: { ...orderWhere, refunded: true } }),
+        prisma.hvCodOrder.count({ where: { ...orderWhere, cancelled: true, refunded: false } }),
+        prisma.hvCodOrder.count({ where: { ...orderWhere, merchantReconciled: true } }),
+        prisma.hvCodOrder.aggregate({ where: { ...orderWhere, currency: 'EGP',
+          shopifyUpdatedAt: { gte: previousStart, lt: from } },
+          _sum: { orderTotalPiasters: true } }),
+      ]);
     const limited = orders.slice(0, 2000);
     const partnerMap = new Map(partners.map(p => [p.id,
       { name: p.user.name, referralCode: p.referralCode }]));
     const totals = { trackedOrders: totalOrders, clicks: totalClicks, leads,
       orderValueEGP: 0, deliveredOrders: 0, pendingOrders: 0,
-      returnedOrders: 0, cancelledOrders: 0, settledOrders: 0 };
+      returnedOrders: 0, cancelledOrders: 0, settledOrders: 0,
+      deliveredValueEGP: 0, reconciledCollectedEGP: 0 };
     const rows = limited.map(o => {
       const state = o.refunded ? 'REFUNDED' : o.cancelled ? 'CANCELLED' :
         o.delivered ? 'DELIVERED' : 'PENDING';
@@ -108,6 +132,17 @@ export async function GET(request: NextRequest) {
           ? 'https://admin.shopify.com/store/herbal-vitaly-2/orders/' + o.shopifyOrderId : null,
       };
     });
+    Object.assign(totals, {
+      orderValueEGP: (valueAll._sum.orderTotalPiasters || 0) / 100,
+      deliveredValueEGP: (valueDelivered._sum.orderTotalPiasters || 0) / 100,
+      reconciledCollectedEGP: (valueCollected._sum.collectedPiasters || 0) / 100,
+      deliveredOrders: deliveredCount,
+      pendingOrders: pendingCount,
+      returnedOrders: returnedCount,
+      cancelledOrders: cancelledCount,
+      settledOrders: settledCount,
+    });
+    const previousOrderValueEGP = (previousValue._sum.orderTotalPiasters || 0) / 100;
     const finance = {
       approvedEGP: commissions.filter(c => c.status === 'APPROVED')
         .reduce((a, c) => a + c.amountCents / 100, 0),
@@ -119,7 +154,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true, role: user.role, name: user.name,
       referralCode: !admin ? user.affiliate!.referralCode : null,
-      days, totals, finance,
+      days, totals, finance, previousOrderValueEGP,
+      lastOrderUpdate: orders[0]?.shopifyUpdatedAt.toISOString() || null,
       activeCoupons: coupons,
       orders: rows, clicksByDay: clicks.slice(0, 2000).map(c => c.createdAt.toISOString().slice(0, 10)),
       partners: admin ? partners.filter(p => p.user.status === 'ACTIVE')
@@ -128,7 +164,7 @@ export async function GET(request: NextRequest) {
       limitations: {
         returnReasons: 'Not yet provided by Bosta/Shopify order connector',
         productLineItems: 'Not yet stored in Refferq order table',
-        revenue: 'Synchronized order value; not collected revenue',
+        revenue: 'Synchronized order value; not collected revenue. Reconciled collections are a separate metric.',
         conversion: 'Attributed Shopify orders / tracked clicks (indicative)',
         commission: 'Only recorded commission ledger entries, never estimated payouts',
       },

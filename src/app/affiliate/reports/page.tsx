@@ -28,12 +28,12 @@ import {
 } from '@/components/ui/table';
 import {
   BarChart3,
-  IndianRupee,
   TrendingUp,
   Target,
   Users,
   Download,
   Calendar,
+  Wallet,
 } from 'lucide-react';
 
 interface ReportStats {
@@ -98,7 +98,7 @@ export default function ReportsPage() {
           d.setMonth(d.getMonth() - i);
           const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
           months[key] = {
-            month: d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
+            month: d.toLocaleDateString('en-EG', { month: 'short', year: 'numeric' }),
             referrals: 0,
             conversions: 0,
             earnings: 0,
@@ -120,7 +120,7 @@ export default function ReportsPage() {
         commissions
           .filter((c: any) => c.status === 'PAID')
           .forEach((c: any) => {
-            const d = new Date(c.createdAt);
+            const d = new Date(c.paidAt || c.createdAt);
             const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
             if (months[key]) months[key].earnings += c.amountCents;
           });
@@ -135,10 +135,10 @@ export default function ReportsPage() {
   };
 
   const formatCurrency = (cents: number) =>
-    `\u20B9${(cents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    (cents / 100).toLocaleString('en-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' EGP';
 
   const exportCSV = () => {
-    const headers = ['Month', 'Referrals', 'Conversions', 'Earnings (₹)'];
+    const headers = ['Month', 'Referrals', 'Conversions', 'Earnings (EGP)'];
     const rows = monthlyData.map((m) => [m.month, m.referrals, m.conversions, (m.earnings / 100).toFixed(2)]);
     const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -195,7 +195,7 @@ export default function ReportsPage() {
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
-                <IndianRupee className="h-4 w-4 text-emerald-600" />
+                <Wallet className="h-4 w-4 text-emerald-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-emerald-600">{formatCurrency(stats.totalEarnings)}</p>
