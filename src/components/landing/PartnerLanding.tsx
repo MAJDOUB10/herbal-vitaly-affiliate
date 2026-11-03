@@ -309,55 +309,39 @@ export default function PartnerLanding() {
       </nav>}
     </header>
 
-    <section className="hv-hero hv-hero-v2" id="content" aria-labelledby="hv-hero-title">
-      <div className="hv-hero-rail" aria-hidden="true"><span>HERBAL VITALY</span><span>THE PARTNER JOURNAL</span><span>01 — 05</span></div>
-      <div className="hv-hero-content">
-        <Reveal className="hv-hero-copy">
-          <div className="hv-eyebrow"><span className="hv-eyebrow-line"/>{t.eyebrow}</div>
-          <h1 id="hv-hero-title" className="hv-display-title">{t.heroTitle1}<br/>{t.heroTitle2}<br/><em>{t.heroAccent}</em></h1>
-          <p className="hv-hero-description">{t.heroText}</p>
-          <div className="hv-action-row">
-            <a className="hv-button" href="#partnership">{t.heroCta}<ForwardArrow size={18} aria-hidden="true"/></a>
-            <a className="hv-text-link" href="#collection">{t.heroAlt}<ForwardArrow size={18} aria-hidden="true"/></a>
+    <section className="hv-hero hv-hero-photo" id="content" aria-labelledby="hv-hero-title">
+      <h1 id="hv-hero-title" className="hv-screenreader-only">
+        {arabic ? 'انضم لبرنامج شركاء هيربل فيتالي' : 'Join the Herbal Vitaly Affiliate Program'}
+      </h1>
+      <div className="hv-hero-photo-desktop">
+        <img
+          src="/images/partner-affiliate-hero-en.jpg"
+          width="1700"
+          height="850"
+          alt="Herbal Vitaly Affiliate Program — a creator working at a laptop in a naturally lit office, with an introduction to trusted partnerships"
+          fetchPriority="high"
+          decoding="async"
+        />
+      </div>
+      <div className="hv-hero-photo-mobile">
+        <div className="hv-hero-photo-mobile-copy">
+          <span className="hv-hero-photo-eyebrow">{arabic ? 'HERBAL VITALY · برنامج الشركاء' : 'THE HERBAL VITALY PARTNER PROGRAM'}</span>
+          <h2>{arabic ? 'شراكة حقيقية تبدأ بالثقة.' : 'A genuine partnership starts with trust.'}</h2>
+          <p>{arabic ? 'انضم لبرنامج شركاء هيربل فيتالي، وشارك ما تؤمن به وتابع أداءك بوضوح.' : 'Build with Herbal Vitaly. Share what you believe in and follow your performance with clarity.'}</p>
+          <div className="hv-hero-photo-mobile-benefits">
+            <span>{arabic ? 'شراكة شفافة' : 'Transparent partnerships'}</span>
+            <span>{arabic ? 'متابعة واضحة' : 'Clear performance tracking'}</span>
           </div>
-          <div className="hv-hero-trust" aria-label={arabic ? 'مميزات الشراكة' : 'Reasons to partner with Herbal Vitaly'}>
-            <div className="hv-hero-trust-item">
-              <UsersRound size={30} strokeWidth={1.6} aria-hidden="true"/>
-              <span><strong>{t.heroProof1}</strong><small>{t.heroProofDesc1}</small></span>
-            </div>
-            <div className="hv-hero-trust-item">
-              <PackageCheck size={30} strokeWidth={1.6} aria-hidden="true"/>
-              <span><strong>{t.heroProof2}</strong><small>{t.heroProofDesc2}</small></span>
-            </div>
-            <div className="hv-hero-trust-item">
-              <ShieldCheck size={30} strokeWidth={1.6} aria-hidden="true"/>
-              <span><strong>{t.heroProof3}</strong><small>{t.heroProofDesc3}</small></span>
-            </div>
-          </div>
-        </Reveal>
-        <Reveal className="hv-hero-art" delay={120}>
-          <div className="hv-hero-art-plate">
-            <span className="hv-art-number">HERBAL VITALY / 001</span>
-            <div className="hv-hero-art-arc" aria-hidden="true"/>
-            <div className="hv-hero-window-shadow" aria-hidden="true"/>
-            <div className="hv-hero-botanical hv-hero-botanical--left" aria-hidden="true">
-              <Leaf/><Leaf/><Leaf/><Leaf/>
-            </div>
-            <div className="hv-hero-stage">
-              <div className="hv-hero-stage-podium hv-hero-stage-podium--wide" aria-hidden="true"/>
-              <div className="hv-hero-stage-podium hv-hero-stage-podium--small" aria-hidden="true"/>
-              <a className="hv-hero-product hv-hero-product--tiynefret" href={products[0].url} target="_blank" rel="noopener noreferrer" aria-label="Explore TIYNEFRET in the official Herbal Vitaly store">
-                <img src={products[0].image} width="540" height="540" alt="Original TIYNEFRET packaging — hair, skin and nails food supplement" fetchPriority="high" />
-              </a>
-              <a className="hv-hero-product hv-hero-product--ushabti" href={products[1].url} target="_blank" rel="noopener noreferrer" aria-label="Explore USHABTI in the official Herbal Vitaly store">
-                <img src={products[1].image} width="380" height="380" alt="Original blue USHABTI bottle with orange cap" />
-              </a>
-              <span className="hv-stage-leaf hv-stage-leaf--one" aria-hidden="true"><Leaf/></span>
-              <span className="hv-stage-leaf hv-stage-leaf--two" aria-hidden="true"><Leaf/></span>
-            </div>
-            <span className="hv-art-vertical" aria-hidden="true">{t.heroIndex}</span>
-          </div>
-        </Reveal>
+        </div>
+        <div className="hv-hero-photo-mobile-visual">
+          <img
+            src="/images/partner-affiliate-hero-en.jpg"
+            width="1700"
+            height="850"
+            alt="A smiling creator at a laptop in a bright, plant-filled workspace"
+            decoding="async"
+          />
+        </div>
       </div>
       <div className="hv-hero-signature">
         <span className="hv-hero-signature-rule" aria-hidden="true"/>

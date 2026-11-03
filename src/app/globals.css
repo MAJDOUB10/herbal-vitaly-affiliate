@@ -642,3 +642,30 @@
 @media (prefers-reduced-motion: reduce) {
   .hv-hero-v2 .hv-hero-product {transition:none;}
 }
+
+
+/* Herbal Vitaly partner hero — editorial photography, no product displays or CTAs. */
+.hv-screenreader-only { position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important; }
+.hv-hero-photo { background:#fff; overflow:hidden; }
+.hv-hero-photo-desktop { max-width:1700px; margin:0 auto; }
+.hv-hero-photo-desktop img { width:100%;height:auto;display:block; }
+.hv-hero-photo-mobile { display:none; }
+.hv-hero-photo .hv-hero-signature { background:#fff; }
+.hv-hero-photo .hv-hero-footline { height:1px;background:#dce7df; }
+@media (max-width:700px) {
+  .hv-hero-photo-desktop { display:none; }
+  .hv-hero-photo-mobile { display:block; }
+  .hv-hero-photo-mobile-copy { padding:46px 24px 31px; }
+  .hv-hero-photo-eyebrow { display:block;font-size:10px;letter-spacing:.16em;font-weight:800;color:#1f6b3a;line-height:1.6; }
+  .hv-hero-photo-mobile-copy h2 { font-family:Georgia,'Times New Roman',serif;font-size:clamp(38px,10vw,58px);font-weight:400;letter-spacing:-.055em;line-height:1.05;margin:22px 0 17px;color:#143d24; }
+  .hv-hero-photo-mobile-copy p { max-width:500px;font-size:16px;line-height:1.65;color:#475b4c;margin:0; }
+  .hv-hero-photo-mobile-benefits { display:flex;flex-wrap:wrap;gap:10px;margin-top:23px; }
+  .hv-hero-photo-mobile-benefits span { font-size:11px;font-weight:700;letter-spacing:.02em;color:#215b34;background:#ecf4ed;padding:10px 12px;border-radius:99px; }
+  .hv-hero-photo-mobile-visual { position:relative;height:clamp(330px,100vw,540px);overflow:hidden;background:#f4f8f4; }
+  .hv-hero-photo-mobile-visual img { width:100%;height:100%;object-fit:cover;object-position:right center;display:block; }
+  .hv-hero-photo .hv-hero-signature { padding:16px 20px 20px; }
+}
+@media (max-width:390px) {
+  .hv-hero-photo-mobile-copy { padding-inline:20px; }
+  .hv-hero-photo-mobile-copy h2 { font-size:39px; }
+}
