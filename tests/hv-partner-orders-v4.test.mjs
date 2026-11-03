@@ -32,8 +32,8 @@ test('exact totals on filtered orders are server side; chart sampling disclosed'
 });
 test('synchronized order details are accurate with unknowns shown as unknown',()=>{
   for(const needle of ['bostaUpdatedAt','merchantSettledAt','returnReason:null',
-    'product:null','commissionStatus:null','orderStatus\(o\)'])
-    assert.match(route,new RegExp(needle));
+    'product:null','commissionStatus:null','orderStatus(o)'])
+    assert.ok(route.includes(needle),needle);
   for(const needle of ['Not yet available from delivery provider',
     'Provider code','timestamp unavailable','not currently linked',
     'Not yet synchronized'])
