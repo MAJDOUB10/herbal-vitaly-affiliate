@@ -17,6 +17,8 @@ type OrderRow = {
   affiliateId?: string | null;
   partnerName?: string | null;
   status: string;
+  cod?: boolean; courierCollected?: boolean; reconciled?: boolean;
+  bostaState?: number | null; trackingNumber?: string | null;
 };
 type PartnerOption = { id: string; name: string; code: string };
 type WebhookStatus = {
@@ -56,6 +58,10 @@ export default function OrdersPage({ admin = false }: { admin?: boolean }) {
   const [partners, setPartners] = useState<PartnerOption[]>([]);
   const [search, setSearch] = useState('');
   const [source, setSource] = useState('');
+  const [status, setStatus] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [partner, setPartner] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -71,9 +77,12 @@ export default function OrdersPage({ admin = false }: { admin?: boolean }) {
   const fetchOrders = useCallback(() => {
     const controller = new AbortController();
     const params = new URLSearchParams({ page: String(page) });
-    if (admin && source) params.set('source', source);
+    if (source) params.set('source', source);
+    if (!admin && status) params.set('status', status);
+    if (!admin && from) params.set('from', from);
+    if (!admin && to) params.set('to', to);
     if (admin && partner) params.set('affiliateId', partner);
-    if (admin && search) params.set('search', search);
+    if (search) params.set('search', search);
     const endpoint = admin ? '/api/admin/orders' : '/api/affiliate/shopify-orders';
     setLoading(true);
     setError('');
@@ -89,7 +98,7 @@ export default function OrdersPage({ admin = false }: { admin?: boolean }) {
       .catch(e => { if (!controller.signal.aborted) setError(e.message || 'Unable to load orders'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [admin, page, partner, search, source, refresh]);
+  }, [admin, page, partner, search, source, status, from, to, refresh]);
   useEffect(() => fetchOrders(), [fetchOrders]);
 
   const fetchSyncStatus = useCallback(async () => {
@@ -153,7 +162,7 @@ export default function OrdersPage({ admin = false }: { admin?: boolean }) {
             Herbal Vitaly Affiliate Hub
           </p>
           <h1 className="flex items-center gap-2 text-2xl font-bold text-[#17251D]">
-            <ShoppingBag className="h-6 w-6 text-primary" /> Orders · Commandes
+            <ShoppingBag className="h-6 w-6 text-primary" /> Orders
           </h1>
           <p className="text-sm text-muted-foreground">
             {admin
@@ -218,62 +227,119 @@ export default function OrdersPage({ admin = false }: { admin?: boolean }) {
           <p className="mt-2 text-sm font-semibold text-amber-700">Subject to COD/Bosta + finance review</p>
         </div>
       </div>
-      {admin && (
-        <div className="grid gap-3 rounded-xl border border-[#E4EBE6] bg-white p-4 md:grid-cols-3">
+      <div className="grid gap-3 rounded-xl border border-[#E4EBE6] bg-white p-4 md:grid-cols-2 xl:grid-cols-4">
+        <label className="space-y-1 text-sm font-medium">
+          <span>Search order / coupon</span>
+          <span className="relative block">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <input className="w-full rounded-lg border border-[#E4EBE6] py-2 pl-9 pr-3 outline-none focus:ring-2 focus:ring-primary"
+              value={search} placeholder="Order #, promo code..."
+              onChange={e => { setSearch(e.target.value); setPage(1); }} />
+          </span>
+        </label>
+        {admin && <label className="space-y-1 text-sm font-medium">
+          <span>Partner</span>
+          <select value={partner} onChange={e => { setPartner(e.target.value); setPage(1); }}
+            className="w-full rounded-lg border border-[#E4EBE6] bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-primary">
+            <option value="">All partners</option>
+            {partners.map(p => <option key={p.id} value={p.id}>{p.name} · {p.code}</option>)}
+          </select>
+        </label>}
+        <label className="space-y-1 text-sm font-medium">
+          <span>Attribution source</span>
+          <select value={source} onChange={e => { setSource(e.target.value); setPage(1); }}
+            className="w-full rounded-lg border border-[#E4EBE6] bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-primary">
+            <option value="">All sources</option>
+            {sourceOptions.filter(([value]) => admin || ['AFFILIATE_LINK','PROMO_CODE','LINK_AND_PROMO'].includes(value))
+              .map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+        {!admin && <>
           <label className="space-y-1 text-sm font-medium">
-            <span>Search order / referral / coupon</span>
-            <span className="relative block">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <input className="w-full rounded-lg border border-[#E4EBE6] py-2 pl-9 pr-3 outline-none focus:ring-2 focus:ring-primary"
-                value={search} placeholder="Order #, promo code..."
-                onChange={e => { setSearch(e.target.value); setPage(1); }} />
-            </span>
-          </label>
-          <label className="space-y-1 text-sm font-medium">
-            <span>Partner</span>
-            <select value={partner} onChange={e => { setPartner(e.target.value); setPage(1); }}
+            <span>Order status</span>
+            <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}
               className="w-full rounded-lg border border-[#E4EBE6] bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-primary">
-              <option value="">All partners</option>
-              {partners.map(p => <option key={p.id} value={p.id}>{p.name} · {p.code}</option>)}
+              <option value="">All statuses</option>
+              {['PENDING_DELIVERY','AWAITING_COD_RECONCILIATION','PENDING_FINANCIAL_APPROVAL','REFUNDED','CANCELLED']
+                .map(key => <option key={key} value={key}>{orderStatusLabels[key]}</option>)}
             </select>
           </label>
-          <label className="space-y-1 text-sm font-medium">
-            <span>Attribution source</span>
-            <select value={source} onChange={e => { setSource(e.target.value); setPage(1); }}
-              className="w-full rounded-lg border border-[#E4EBE6] bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-primary">
-              <option value="">All sources</option>
-              {sourceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
+          <label className="space-y-1 text-sm font-medium"><span>Updated from (UTC)</span>
+            <input type="date" value={from} max={to || undefined}
+              onChange={e => { setFrom(e.target.value); setPage(1); }}
+              className="w-full rounded-lg border border-[#E4EBE6] bg-white px-3 py-2 outline-none"/>
           </label>
-        </div>
-      )}
+          <label className="space-y-1 text-sm font-medium"><span>Updated to (UTC)</span>
+            <input type="date" value={to} min={from || undefined}
+              onChange={e => { setTo(e.target.value); setPage(1); }}
+              className="w-full rounded-lg border border-[#E4EBE6] bg-white px-3 py-2 outline-none"/>
+          </label>
+          <button type="button" onClick={() => { setSearch(''); setSource(''); setStatus(''); setFrom(''); setTo(''); setPage(1); }}
+            className="self-end rounded-lg border border-[#C5DCCB] px-4 py-2 text-sm font-semibold text-[#1F6B3A]">
+            Clear filters
+          </button>
+        </>}
+      </div>
       <div className="overflow-hidden rounded-xl border border-[#E4EBE6] bg-white shadow-sm">
         {error && <p role="alert" className="border-b bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[850px] text-sm">
             <thead className="border-b bg-[#F7FAF8] text-left text-[#42564A]">
-              <tr>{['Order', 'Date', ...(admin ? ['Partner'] : []), 'Source', 'Promo code', 'Status', 'Total'].map(h =>
+              <tr>{['Order', 'Date', ...(admin ? ['Partner'] : []), 'Source', 'Promo code', 'Status', 'Total', ...(!admin ? ['Details'] : [])].map(h =>
                 <th className="whitespace-nowrap px-4 py-3 font-semibold" key={h}>{h}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-[#E4EBE6]">
               {rows.map(o => (
-                <tr key={o.id} className="hover:bg-[#F7FAF8]">
-                  <td className="whitespace-nowrap px-4 py-3 font-semibold">{o.orderName}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{date(o.updatedAt)}</td>
-                  {admin && <td className="px-4 py-3">{o.partnerName || '—'}{o.referralCode &&
-                    <div className="text-xs text-muted-foreground">{o.referralCode}</div>}</td>}
-                  <td className="whitespace-nowrap px-4 py-3">
-                    <span className="inline-flex items-center gap-1.5 rounded-md bg-[#EAF4ED] px-2 py-1 text-xs font-medium text-primary">
-                      {o.attributionSource === 'PROMO_CODE' ? <Tag className="h-3 w-3" /> : <Link2 className="h-3 w-3" />}
-                      {sourceLabels[o.attributionSource] || o.attributionSource}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs">{o.discountCode || '—'}</td>
-                  <td className="px-4 py-3 text-xs">{orderStatusLabels[o.status] || o.status}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right font-semibold">{amount(o.totalEGP)}</td>
-                </tr>
+                <React.Fragment key={o.id}>
+                  <tr className="hover:bg-[#F7FAF8]">
+                    <td className="whitespace-nowrap px-4 py-3 font-semibold">{o.orderName}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{date(o.updatedAt)}</td>
+                    {admin && <td className="px-4 py-3">{o.partnerName || '—'}{o.referralCode &&
+                      <div className="text-xs text-muted-foreground">{o.referralCode}</div>}</td>}
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-[#EAF4ED] px-2 py-1 text-xs font-medium text-primary">
+                        {o.attributionSource === 'PROMO_CODE' ? <Tag className="h-3 w-3" /> : <Link2 className="h-3 w-3" />}
+                        {sourceLabels[o.attributionSource] || o.attributionSource}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs">{o.discountCode || '—'}</td>
+                    <td className="px-4 py-3 text-xs">{orderStatusLabels[o.status] || o.status}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right font-semibold">{amount(o.totalEGP)}</td>
+                    {!admin && <td className="px-4 py-3">
+                      <button type="button" aria-expanded={expanded===o.id}
+                        onClick={() => setExpanded(expanded===o.id ? null : o.id)}
+                        className="rounded-lg border border-[#D9E6DD] px-3 py-1.5 text-xs font-semibold text-[#1F6B3A]">
+                        {expanded===o.id ? 'Hide' : 'Details'}
+                      </button>
+                    </td>}
+                  </tr>
+                  {!admin && expanded === o.id && <tr className="bg-[#F7FBF8]">
+                    <td colSpan={8} className="px-4 py-4">
+                      <div className="grid gap-4 text-xs text-slate-600 sm:grid-cols-3">
+                        <div><strong className="block text-[#173621]">Payment</strong>
+                          {o.cod ? 'Cash on delivery' : 'Non-COD review'}
+                        </div>
+                        <div><strong className="block text-[#173621]">Courier collection</strong>
+                          {o.courierCollected ? 'Recorded' : 'Not yet confirmed'}
+                        </div>
+                        <div><strong className="block text-[#173621]">Financial reconciliation</strong>
+                          {o.reconciled ? 'Recorded' : 'Pending / unverified'}
+                        </div>
+                        <div><strong className="block text-[#173621]">Bosta tracking</strong>
+                          {o.trackingNumber || 'Not available'}
+                        </div>
+                        <div><strong className="block text-[#173621]">Raw Bosta state</strong>
+                          {o.bostaState == null ? 'Not available' : String(o.bostaState) + ' (unmapped)'}
+                        </div>
+                        <div><strong className="block text-[#173621]">Commission status</strong>
+                          Requires eligibility checks and approval; no automatic payout.
+                        </div>
+                      </div>
+                    </td>
+                  </tr>}
+                </React.Fragment>
               ))}
-              {rows.length === 0 && <tr><td colSpan={admin ? 7 : 6} className="p-10 text-center text-muted-foreground">
+              {rows.length === 0 && <tr><td colSpan={admin ? 7 : 7} className="p-10 text-center text-muted-foreground">
                 {loading ? 'Loading Shopify orders…' : 'No orders yet for these filters. Tracking must also be enabled on Shopify.'}
               </td></tr>}
             </tbody>
