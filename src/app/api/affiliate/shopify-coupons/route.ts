@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
           handle: p.handle, title: p.title, productUrl: p.url,
           // Partners requested the short, directly shareable Shopify landing
           // URL with their OWN live discount code, not the tracking redirect
-          // and not demonstration values such as TEST15 or hvTEST15.
+          // rather than static demonstration values.
           affiliateLink: ['tiynefret', 'ushabti'].includes(p.handle)
             ? affiliateLandingPageLink(c.code, p.handle)
             : 'https://partner.herbalvitaly.com/r/' +
