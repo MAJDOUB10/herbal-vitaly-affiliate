@@ -1,2 +1,5 @@
-import OrdersPage from '@/components/orders/OrdersPage';
-export default function PartnerOrders() { return <OrdersPage />; }
+import PartnerOrdersV4 from '@/components/orders/PartnerOrdersV4';
+
+export default function PartnerOrders() {
+  return <PartnerOrdersV4 />;
+}
