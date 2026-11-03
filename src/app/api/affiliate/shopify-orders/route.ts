@@ -78,7 +78,7 @@ function addOrderFilters(where: Prisma.HvCodOrderWhereInput, params: URLSearchPa
     { shopifyOrderId: { contains: search, mode: 'insensitive' } },
     { discountCode: { contains: search, mode: 'insensitive' } },
   ];
-  if (coupon) where.discountCode = coupon;
+  if (coupon) where.discountCode = { equals: coupon, mode: 'insensitive' };
   if (ATTRIBUTED.includes(source)) where.attributionSource = source;
   if (payment === 'COD') where.isCod = true;
   if (payment === 'NON_COD') where.isCod = false;

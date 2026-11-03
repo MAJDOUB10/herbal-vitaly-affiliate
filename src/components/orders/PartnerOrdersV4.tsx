@@ -458,6 +458,39 @@ export default function PartnerOrdersV4() {
           </span>)}
         </div>
       </section>
+      <section className="rounded-2xl border border-[#E4ECE6] bg-white p-5">
+        <Heading title="Daily order volume" description="Order count from the synchronized records in this selection."/>
+        <div className="mt-4 h-56 w-full" role="img" aria-label="Daily number of attributed orders">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={trends}>
+              <CartesianGrid vertical={false} stroke="#EEF2EF"/>
+              <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{fontSize:10}} minTickGap={24}/>
+              <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{fontSize:10}} width={35}/>
+              <Tooltip/>
+              <Bar dataKey="orders" name="Daily orders" fill="#1F6B3A" radius={[4,4,0,0]}/>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        {data&&!data.trendComplete&&<p className="text-xs text-amber-800">Daily chart sampled; use exact summary cards for totals.</p>}
+      </section>
+      <section className="rounded-2xl border border-[#E4ECE6] bg-white p-5">
+        <Heading title="Payment reconciliation" description="Financially reconciled vs other orders in this selection."/>
+        <div className="mt-6 grid gap-5">
+          <div>
+            <div className="mb-2 flex justify-between text-xs"><span>Reconciled orders</span><strong>{summary?.reconciledOrders??'—'}</strong></div>
+            <div className="h-3 overflow-hidden rounded-full bg-[#E7EDE8]">
+              <div className="h-full rounded-full bg-[#1F6B3A]" style={{width:summary?.totalOrders?String(100*summary.reconciledOrders/summary.totalOrders)+'%':'0%'}}/>
+            </div>
+          </div>
+          <div>
+            <div className="mb-2 flex justify-between text-xs"><span>Collection recorded</span><strong>{summary?.collectedOrders??'—'}</strong></div>
+            <div className="h-3 overflow-hidden rounded-full bg-[#E7EDE8]">
+              <div className="h-full rounded-full bg-[#8BB69A]" style={{width:summary?.totalOrders?String(100*summary.collectedOrders/summary.totalOrders)+'%':'0%'}}/>
+            </div>
+          </div>
+        </div>
+        <p className="mt-5 text-xs leading-6 text-slate-500">Collections and reconciliation are separate recorded flags. Neither means commission approval.</p>
+      </section>
       <section className="rounded-2xl border border-[#E4ECE6] bg-white p-5 xl:col-span-2">
         <Heading title="Order value vs collection" description="Distinct financial concepts; not equivalent to commissions."/>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
