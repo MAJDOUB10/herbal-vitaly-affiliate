@@ -64,8 +64,7 @@ export async function GET(request: NextRequest) {
           currency: true, shopifyUpdatedAt: true, isCod: true, delivered: true,
           courierCollected: true, merchantReconciled: true, cancelled: true,
           refunded: true, attributionSource: true, discountCode: true,
-          bostaState: true, bostaTrackingNumber: true, courierCollected: true,
-          merchantReconciled: true,
+          bostaState: true, bostaTrackingNumber: true,
         },
       }),
     ]);
