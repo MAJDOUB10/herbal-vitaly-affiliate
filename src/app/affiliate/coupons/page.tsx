@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-type ProductLink = { handle: string; title: string; productUrl: string; affiliateLink: string };
+type ProductLink = { handle: string; title: string; productUrl: string; affiliateLink: string; trackedLink: string | null };
 type PartnerCoupon = {
   id: string; code: string; discountType: string; discountValue: number;
   products: ProductLink[];
@@ -135,7 +135,7 @@ export default function AffiliateCouponsPage() {
       <p className="text-xs font-semibold uppercase tracking-widest text-primary">Herbal Vitaly Affiliate Hub</p>
       <h1 className="mt-1 text-2xl font-bold">My Shopify Coupons & Product Links</h1>
       <p className="text-sm text-muted-foreground">
-        Share one product-specific affiliate link. It records your referral and applies your assigned Shopify code at checkout.
+        Share your personal Shopify product-page link with your code in ?ref=. Use the optional tracked link if you also want Refferq click statistics.
       </p>
     </div>
     {!onboardingLoading && !assigned && policyEnabled && (
@@ -221,21 +221,28 @@ export default function AffiliateCouponsPage() {
         <CardDescription>Only the listed products qualify for this Shopify discount.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-xs font-medium text-muted-foreground">Shopify verified eligible product pages</p>
+        <p className="text-xs font-medium text-muted-foreground">Shopify verified product pages · your discount code: <span className="font-mono font-bold text-[#1F6B3A]">{c.code}</span></p>
         {c.products.map(p => <div key={p.handle} className="space-y-2 rounded-xl border border-[#E4EBE6] p-3">
-          <a href={p.productUrl} target="_blank" rel="noopener noreferrer"
+          <a href={p.affiliateLink} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
             {p.title} <ExternalLink className="h-3 w-3"/>
           </a>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <input readOnly aria-label={'Affiliate link for ' + p.handle}
+            <input readOnly aria-label={'Shopify product link with your promo code for ' + p.handle}
               className="min-w-0 flex-1 rounded-lg border border-[#E4EBE6] bg-[#F7FAF8] px-3 py-2 font-mono text-xs"
               value={p.affiliateLink} onFocus={e => e.currentTarget.select()} />
             <Button type="button" variant="outline" className="gap-2"
               onClick={() => copy(p.affiliateLink)}>
-              <Copy className="h-4 w-4" /> {copied === p.affiliateLink ? 'Copied' : 'Copy link'}
+              <Copy className="h-4 w-4" /> {copied === p.affiliateLink ? 'Copied' : 'Copy Shopify link'}
             </Button>
           </div>
+          {p.trackedLink && <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#E4EBE6] pt-2">
+            <p className="text-xs text-muted-foreground">Optional: use the tracked link to count partner clicks in Refferq before redirecting to this same Shopify product page.</p>
+            <Button type="button" size="sm" variant="ghost" className="gap-2 text-[#1F6B3A]"
+              onClick={() => copy(p.trackedLink!)}>
+              <Copy className="h-3.5 w-3.5" /> {copied === p.trackedLink ? 'Tracked link copied' : 'Copy tracked link'}
+            </Button>
+          </div>}
         </div>)}
       </CardContent>
     </Card>)}
