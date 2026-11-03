@@ -301,7 +301,8 @@ export default function AffiliateDashboardV3() {
           </div>
           <p className="mt-2 text-xs text-slate-500">The chart uses the available synchronized order update dates.</p>
         </Section>
-        <Section title="Delivery overview" description="Exact order counts across the selected period." id="delivery-status">
+        <Section title="Delivery overview" description="Exact order counts across the selected period." id="delivery-status"
+          aside={<Link href="/affiliate/deliveries" className="text-xs font-semibold text-[#1F6B3A]">Open Deliveries</Link>}>
           {statusChart.length ? <div className="h-[220px] w-full" role="img" aria-label="Order delivery status distribution">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart><Pie data={statusChart} dataKey="value" nameKey="name" innerRadius={61} outerRadius={87} paddingAngle={2}>
@@ -370,7 +371,7 @@ export default function AffiliateDashboardV3() {
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <Section title="My verified product links" id="shopify-products"
           description="Only Shopify-confirmed active codes and eligible products are shown."
-          aside={<Link href="/affiliate/coupons" className="text-xs font-semibold text-[#1F6B3A]">Manage links</Link>}>
+          aside={<Link href="/affiliate/product-links" className="text-xs font-semibold text-[#1F6B3A]">Manage links</Link>}>
           {couponError && <p role="alert" className="mb-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-900">{couponError}</p>}
           {productLinks.length ? <div className="space-y-2">
             {productLinks.slice(0, 6).map(item => <div key={item.code + item.handle}
@@ -394,11 +395,12 @@ export default function AffiliateDashboardV3() {
           </div> : <div className="rounded-xl border border-dashed border-[#CBDDCF] bg-[#F8FBF8] p-6 text-sm text-slate-600">
             No verified partner product links are available yet. Activate an assigned Shopify code to get started.
           </div>}
-          <Link href="/affiliate/coupons" className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-[#1F6B3A]">
+          <Link href="/affiliate/product-links" className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-[#1F6B3A]">
             All codes and product links <ArrowRight className="h-4 w-4"/>
           </Link>
         </Section>
-        <Section title="Delivery and returns" description="Verified statuses, without guessed return reasons." id="return-reasons">
+        <Section title="Delivery and returns" description="Verified statuses, without guessed return reasons." id="return-reasons"
+          aside={<Link href="/affiliate/returns" className="text-xs font-semibold text-[#1F6B3A]">Open Returns</Link>}>
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-[#F4F9F5] p-4"><Truck className="h-4 w-4 text-[#1F6B3A]"/>
               <strong className="mt-3 block text-xl text-[#173621]">{insights.totals.deliveredOrders}</strong>
