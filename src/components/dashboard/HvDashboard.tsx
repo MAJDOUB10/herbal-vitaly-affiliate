@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import AffiliateDashboardV3 from './AffiliateDashboardV3';
 import { AreaChart, Area, BarChart, Bar, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Activity, ArrowUpRight, BarChart3, CalendarDays, CheckCircle2, ClipboardCopy, ExternalLink, FilterX, Link2, Package, RefreshCw, RotateCcw, ShoppingBag, Ticket, Truck, Users, Wallet } from 'lucide-react';
 
@@ -69,6 +70,10 @@ function Panel({ title, subtitle, children, id }: {
 }
 
 export default function HvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
+  return role === 'AFFILIATE' ? <AffiliateDashboardV3 /> : <LegacyHvDashboard role={role} />;
+}
+
+function LegacyHvDashboard({ role }: { role: 'ADMIN' | 'AFFILIATE' }) {
   const admin = role === 'ADMIN';
   const [days, setDays] = useState(30);
   const [partner, setPartner] = useState('');
