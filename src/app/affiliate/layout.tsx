@@ -45,7 +45,6 @@ import {
   Settings,
   LogOut,
   ChevronsUpDown,
-  Bell,
 } from 'lucide-react';
 
 
@@ -57,9 +56,9 @@ const mainNavItems = [
   { title: 'Product Links', url: '/affiliate#shopify-products', icon: Package },
   { title: 'Deliveries', url: '/affiliate#delivery-status', icon: Truck },
   { title: 'Returns', url: '/affiliate#return-reasons', icon: RotateCcw },
-  { title: 'Payouts', url: '/affiliate/payouts', icon: Wallet },
-  { title: 'Resources', url: '/affiliate/resources', icon: BookOpen },
-  { title: 'Support', url: '/affiliate/support', icon: Headphones },
+  { title: 'Commissions & Payouts', url: '/affiliate/payouts', icon: Wallet },
+  { title: 'Marketing Resources', url: '/affiliate/resources', icon: BookOpen },
+  { title: 'Support Center', url: '/affiliate/support', icon: Headphones },
   { title: 'Reports', url: '/affiliate/reports', icon: BarChart3, badge: 'BETA' },
 ];
 
@@ -227,8 +226,10 @@ export default function AffiliateLayout({ children }: { children: React.ReactNod
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="relative" asChild>
+                <a href="/affiliate/support" aria-label="Open support center" title="Support Center">
+                  <Headphones className="h-4 w-4" />
+                </a>
               </Button>
             </div>
           </div>
