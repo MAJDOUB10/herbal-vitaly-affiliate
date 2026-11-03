@@ -21,10 +21,9 @@ export async function GET(request: NextRequest) {
     const affiliateId = user.affiliate.id;
     const page = Math.min(1000, Math.max(1, Number(request.nextUrl.searchParams.get('page')) || 1));
     const perPage = 25;
-    const where: Prisma.HvCodOrderWhereInput = {
-      affiliateId,
+    const where = { affiliateId,
       attributionSource: { in: ['AFFILIATE_LINK', 'PROMO_CODE', 'LINK_AND_PROMO'] },
-    };
+    } as Prisma.HvCodOrderWhereInput;
     const search = (request.nextUrl.searchParams.get('search') || '').trim().slice(0, 80);
     const source = request.nextUrl.searchParams.get('source') || '';
     const status = request.nextUrl.searchParams.get('status') || '';
@@ -39,7 +38,7 @@ export async function GET(request: NextRequest) {
     if (status === 'REFUNDED') where.refunded = true;
     if (status === 'CANCELLED') { where.cancelled = true; where.refunded = false; }
     if (status === 'PENDING_DELIVERY') {
-      where.delivered = false; where.cancelled = false; where.refunded = false;
+      where.delivered = false; where.isCod = true; where.cancelled = false; where.refunded = false;
     }
     if (status === 'AWAITING_COD_RECONCILIATION') {
       where.delivered = true; where.isCod = true; where.merchantReconciled = false;
