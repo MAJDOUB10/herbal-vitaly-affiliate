@@ -30,11 +30,17 @@ test('dashboard does not fabricate Shopify products, return reasons or approved 
  assert.doesNotMatch(api, /payout\.create|commission\.update|prisma\.hvCodOrder\.update/);
 });
 
-test('admin and affiliate dashboards share UI but cannot impersonate each other', () => {
+test('admin and affiliate dashboards remain role-scoped and cannot impersonate each other', () => {
  const admin = source('src/app/admin/page.tsx');
+ const command = source('src/components/dashboard/AdminCommandCenter.tsx');
+ const commandApi = source('src/app/api/admin/command-center/route.ts');
  const partner = source('src/app/affiliate/page.tsx');
  const ui = source('src/components/dashboard/HvDashboard.tsx');
- assert.match(admin, /role="ADMIN"/);
+ assert.match(admin, /AdminCommandCenter/);
+ assert.match(command, /\/api\/admin\/command-center/);
+ assert.match(commandApi, /x-authenticated-role'\) !== 'ADMIN'/);
+ assert.match(commandApi, /actor\.role !== 'ADMIN'/);
+ assert.match(commandApi, /actor\.status !== 'ACTIVE'/);
  assert.match(partner, /role="AFFILIATE"/);
  assert.match(ui, /\/api\/dashboard\/insights/);
  assert.match(ui, /\/api\/affiliate\/shopify-coupons/);
