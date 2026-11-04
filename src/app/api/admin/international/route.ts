@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { randomUUID } from 'node:crypto';
+import { totalUsdCents, qualifiesForAccrual } from '@/lib/international-math';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -111,7 +112,7 @@ export async function POST(request:NextRequest) {
      seen.add(sku);const p=products.get(sku);if(!p)fail('Unknown or disabled SKU '+sku);
      const unitCents=BigInt(p.unit_price_cents);lines.push({sku,quantity,unitCents,total:BigInt(quantity)*unitCents});
     }
-    const total=lines.reduce((n,l)=>n+l.total,BigInt(0)),reference=ref('HVQ',uid),notes=str(b.notes,1200);
+    const total=totalUsdCents(lines.map(l=>({quantity:l.quantity,unitCents:l.unitCents}))),reference=ref('HVQ',uid),notes=str(b.notes,1200);
     await prisma.$transaction(async tx=>{
      const clients=await tx.$queryRawUnsafe<Row[]>('SELECT id FROM intl_clients WHERE id=$1::uuid',client);
      if(!clients.length)fail('Client not found');
@@ -177,7 +178,7 @@ export async function POST(request:NextRequest) {
      if(old.length)fail('Duplicate payment reference');
      await tx.$executeRawUnsafe('INSERT INTO intl_payments(order_id,reference,amount_cents,paid_at,recorded_by) VALUES($1::uuid,$2,$3::bigint,$4::date,$5)',orderId,paymentRef,String(amount),paidAt,actor);
      await tx.$executeRawUnsafe('UPDATE intl_orders SET paid_cents=paid_cents+$2::bigint WHERE id=$1::uuid',orderId,String(amount));
-     if(BigInt(order.paid_cents)+BigInt(amount)===BigInt(order.total_cents)){
+     if(qualifiesForAccrual(BigInt(order.total_cents),BigInt(order.paid_cents)+BigInt(amount),order.order_status)){
       // Only fully collected B2B orders accrue pending commissions. No automatic payouts.
       await tx.$executeRawUnsafe("INSERT INTO intl_commissions(order_id,order_line_id,rule_id,agent_id,eligible_quantity,rate_cents,amount_cents) SELECT o.id,l.id,r.id,r.agent_id,l.quantity,r.rate_cents,l.quantity*r.rate_cents FROM intl_orders o JOIN intl_order_lines l ON l.order_id=o.id JOIN intl_commission_rules r ON r.client_id=o.client_id AND r.active=TRUE WHERE o.id=$1::uuid AND o.order_status NOT IN ('CANCELLED','RETURNED') ON CONFLICT(order_line_id,rule_id) DO NOTHING",orderId);
      }
