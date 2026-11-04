@@ -9,7 +9,10 @@ test('partner V3 is isolated from the admin dashboard', () => {
   const partner = src('src/components/dashboard/AffiliateDashboardV3.tsx');
   const admin = src('src/app/admin/page.tsx');
   assert.match(shared, /role === 'AFFILIATE' \? <AffiliateDashboardV3/);
-  assert.match(admin, /role="ADMIN"/);
+  assert.match(admin, /AdminCommandCenter/);
+  const adminOnly = src('src/app/api/admin/command-center/route.ts');
+  assert.match(adminOnly, /actor\.role !== 'ADMIN'/);
+  assert.match(adminOnly, /actor\.status !== 'ACTIVE'/);
   assert.match(partner, /\/api\/dashboard\/insights/);
   assert.match(partner, /\/api\/affiliate\/shopify-coupons/);
 });
