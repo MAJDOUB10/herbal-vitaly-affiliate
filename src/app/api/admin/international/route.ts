@@ -28,6 +28,7 @@ function minor(v: unknown): number {
 function json(v: unknown) { return JSON.parse(JSON.stringify(v,(_k,x)=>typeof x==='bigint'?Number(x):x)); }
 function ref(prefix: string, uid: string) { return prefix+'-'+new Date().getUTCFullYear()+'-'+uid.replace(/-/g,'').slice(0,10).toUpperCase(); }
 async function auth(request: NextRequest) {
+ if(process.env.INTERNATIONAL_SALES_ENABLED!=='true')fail('International Sales is disabled in this environment');
  const uid=request.headers.get('x-user-id');
  if(!uid || request.headers.get('x-authenticated-role')!=='ADMIN') fail('Unauthorized');
  // Trusted headers are overwritten by src/proxy.ts from the signed HttpOnly session.
@@ -39,7 +40,7 @@ async function audit(tx:any,actor:string,action:string,type:string,entityId:stri
  await tx.$executeRawUnsafe('INSERT INTO intl_audit(actor_user_id,action,entity_type,entity_id,metadata) VALUES($1,$2,$3,$4,$5::jsonb)',actor,action,type,entityId,JSON.stringify(meta));
 }
 function errorResponse(e:unknown) {
- if(e instanceof InputError)return NextResponse.json({error:e.message},{status:e.message==='Unauthorized'?403:400});
+ if(e instanceof InputError)return NextResponse.json({error:e.message},{status:e.message==='Unauthorized'?403:e.message.includes('disabled')?503:400});
  console.error('International Sales error:',e instanceof Error?e.message:'unknown');
  return NextResponse.json({error:'International Sales database is not ready. Apply the reviewed SQL migration to the Preview database.'},{status:503});
 }
@@ -87,6 +88,7 @@ export async function POST(request:NextRequest) {
     const url=str(b.documentUrl,1000),notes=str(b.termsNotes,2000),status=str(b.status);
     if(url&&!/^https:\/\/(drive\.google\.com|docs\.google\.com)\//.test(url))fail('Provide a Google Drive contract URL');
     if(!['DRAFT','ACTIVE'].includes(status))fail('Invalid contract status');
+    if(status==='ACTIVE'&&!url)fail('An active contract requires a signed document URL');
     const reference=ref('HVC',uid);
     await prisma.$transaction(async tx=>{
      await tx.$executeRawUnsafe('INSERT INTO intl_contracts(id,client_id,reference,title,effective_date,expiry_date,status,document_url,terms_notes,created_by) VALUES($1::uuid,$2::uuid,$3,$4,$5::date,$6::date,$7,$8,$9,$10)',uid,client,reference,title,start,end,status,url||null,notes||null,actor);
@@ -147,6 +149,23 @@ export async function POST(request:NextRequest) {
      await audit(tx,actor,action,'order',uid,{reference});
     });
     result={id:uid,reference};break;
+   }
+   case 'order_status': {
+    const orderId=id(b.orderId),next=req(b.status,'Order status');
+    const allowed:Record<string,string[]>={CONFIRMED:['SHIPPED','CANCELLED','RETURNED'],SHIPPED:['DELIVERED','RETURNED'],DELIVERED:['RETURNED']};
+    await prisma.$transaction(async tx=>{
+     const rows=await tx.$queryRawUnsafe<Order[]>('SELECT * FROM intl_orders WHERE id=$1::uuid FOR UPDATE',orderId),order=rows[0];
+     if(!order||!allowed[order.order_status]?.includes(next))fail('Invalid order status transition');
+     if(next==='CANCELLED'&&BigInt(order.paid_cents)>0n)fail('Reconcile recorded receipts before cancelling an order');
+     if(next==='RETURNED'){
+      const paid=await tx.$queryRawUnsafe<Array<{id:string}>>("SELECT id FROM intl_commissions WHERE order_id=$1::uuid AND status='PAID'",orderId);
+      if(paid.length)fail('Paid commissions require a documented manual clawback before return processing');
+      await tx.$executeRawUnsafe("UPDATE intl_commissions SET status='VOID' WHERE order_id=$1::uuid AND status IN ('PENDING','APPROVED')",orderId);
+     }
+     await tx.$executeRawUnsafe('UPDATE intl_orders SET order_status=$2 WHERE id=$1::uuid',orderId,next);
+     await audit(tx,actor,action,'order',orderId,{from:order.order_status,to:next});
+    });
+    result={id:orderId,status:next};break;
    }
    case 'payment': {
     const orderId=id(b.orderId),amount=qty(b.amountCents,1000000000),paymentRef=req(b.paymentReference,'Bank reference',150),paidAt=day(b.paidAt);
