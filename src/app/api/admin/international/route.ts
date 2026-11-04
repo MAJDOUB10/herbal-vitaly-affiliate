@@ -111,7 +111,7 @@ export async function POST(request:NextRequest) {
      seen.add(sku);const p=products.get(sku);if(!p)fail('Unknown or disabled SKU '+sku);
      const unitCents=BigInt(p.unit_price_cents);lines.push({sku,quantity,unitCents,total:BigInt(quantity)*unitCents});
     }
-    const total=lines.reduce((n,l)=>n+l.total,0n),reference=ref('HVQ',uid),notes=str(b.notes,1200);
+    const total=lines.reduce((n,l)=>n+l.total,BigInt(0)),reference=ref('HVQ',uid),notes=str(b.notes,1200);
     await prisma.$transaction(async tx=>{
      const clients=await tx.$queryRawUnsafe<Row[]>('SELECT id FROM intl_clients WHERE id=$1::uuid',client);
      if(!clients.length)fail('Client not found');
@@ -156,7 +156,7 @@ export async function POST(request:NextRequest) {
     await prisma.$transaction(async tx=>{
      const rows=await tx.$queryRawUnsafe<Order[]>('SELECT * FROM intl_orders WHERE id=$1::uuid FOR UPDATE',orderId),order=rows[0];
      if(!order||!allowed[order.order_status]?.includes(next))fail('Invalid order status transition');
-     if(next==='CANCELLED'&&BigInt(order.paid_cents)>0n)fail('Reconcile recorded receipts before cancelling an order');
+     if(next==='CANCELLED'&&BigInt(order.paid_cents)>BigInt(0))fail('Reconcile recorded receipts before cancelling an order');
      if(next==='RETURNED'){
       const paid=await tx.$queryRawUnsafe<Array<{id:string}>>("SELECT id FROM intl_commissions WHERE order_id=$1::uuid AND status='PAID'",orderId);
       if(paid.length)fail('Paid commissions require a documented manual clawback before return processing');
