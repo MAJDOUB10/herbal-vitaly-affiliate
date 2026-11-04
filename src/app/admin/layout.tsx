@@ -269,11 +269,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-4 w-4" />
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
-                  3
-                </span>
+              <Button asChild variant="ghost" size="icon" className="relative">
+                <a href="/admin/support" aria-label="Open partner support inbox">
+                  <Bell className="h-4 w-4" />
+                </a>
               </Button>
             </div>
           </div>
