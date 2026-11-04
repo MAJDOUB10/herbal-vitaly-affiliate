@@ -1010,3 +1010,213 @@ model HvFinanceDocumentLine {
   @@unique([documentId, lineNumber])
   @@map("hv_finance_document_lines")
 }
+
+
+// ──────────────────────────────────────────────────────────────────────────────
+// International Sales: dedicated USD B2B tables. These models describe the
+// additive SQL migration in prisma/migrations/20261104_international_sales.
+// They deliberately do not share the domestic Shopify / EGP affiliate ledger.
+// ──────────────────────────────────────────────────────────────────────────────
+model IntlClient {
+  id              String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  legalName       String               @map("legal_name")
+  displayName     String               @map("display_name")
+  country         String
+  address         String               @default("")
+  registrationNo  String?              @map("registration_no")
+  taxNo           String?              @map("tax_no")
+  contactName     String?              @map("contact_name")
+  contactEmail    String?              @map("contact_email")
+  notes           String?
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  contracts       IntlContract[]
+  quotes          IntlQuote[]
+  orders          IntlOrder[]
+  commissionRules IntlCommissionRule[]
+
+  @@map("intl_clients")
+}
+
+model IntlProduct {
+  sku               String           @id
+  productName       String           @map("product_name")
+  unitPriceCents    BigInt           @map("unit_price_cents")
+  currency          String           @default("USD") @db.Char(3)
+  active            Boolean          @default(true)
+  updatedAt         DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  quoteLines        IntlQuoteLine[]
+  orderLines        IntlOrderLine[]
+
+  @@map("intl_products")
+}
+
+model IntlContract {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId      String       @map("client_id") @db.Uuid
+  reference     String       @unique
+  title         String
+  effectiveDate DateTime     @map("effective_date") @db.Date
+  expiryDate    DateTime     @map("expiry_date") @db.Date
+  status        String       @default("DRAFT")
+  documentUrl   String?      @map("document_url")
+  termsNotes    String?      @map("terms_notes")
+  createdBy     String       @map("created_by")
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  client        IntlClient   @relation(fields: [clientId], references: [id])
+  quotes        IntlQuote[]
+
+  @@index([clientId], map: "idx_intl_contracts_client")
+  @@map("intl_contracts")
+}
+
+model IntlQuote {
+  id          String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId    String          @map("client_id") @db.Uuid
+  contractId  String?         @map("contract_id") @db.Uuid
+  reference   String          @unique
+  issuedAt    DateTime        @default(now()) @map("issued_at") @db.Date
+  validUntil  DateTime        @map("valid_until") @db.Date
+  status      String          @default("DRAFT")
+  currency    String          @default("USD") @db.Char(3)
+  totalCents  BigInt          @map("total_cents")
+  notes       String?
+  createdBy   String          @map("created_by")
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  client      IntlClient      @relation(fields: [clientId], references: [id])
+  contract    IntlContract?   @relation(fields: [contractId], references: [id])
+  lines       IntlQuoteLine[]
+  order       IntlOrder?
+
+  @@index([clientId, createdAt(sort: Desc)], map: "idx_intl_quotes_client")
+  @@map("intl_quotes")
+}
+
+model IntlQuoteLine {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quoteId        String       @map("quote_id") @db.Uuid
+  sku            String
+  quantity       Int
+  unitPriceCents BigInt       @map("unit_price_cents")
+  lineTotalCents BigInt       @map("line_total_cents")
+  quote          IntlQuote    @relation(fields: [quoteId], references: [id])
+  product        IntlProduct  @relation(fields: [sku], references: [sku])
+
+  @@unique([quoteId, sku])
+  @@map("intl_quote_lines")
+}
+
+model IntlOrder {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId     String           @map("client_id") @db.Uuid
+  quoteId      String           @unique @map("quote_id") @db.Uuid
+  reference    String           @unique
+  orderStatus  String           @default("CONFIRMED") @map("order_status")
+  currency     String           @default("USD") @db.Char(3)
+  totalCents   BigInt           @map("total_cents")
+  paidCents    BigInt           @default(0) @map("paid_cents")
+  createdBy    String           @map("created_by")
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  client       IntlClient       @relation(fields: [clientId], references: [id])
+  quote        IntlQuote        @relation(fields: [quoteId], references: [id])
+  lines        IntlOrderLine[]
+  payments     IntlPayment[]
+  commissions  IntlCommission[]
+
+  @@index([clientId, createdAt(sort: Desc)], map: "idx_intl_orders_client")
+  @@map("intl_orders")
+}
+
+model IntlOrderLine {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId        String           @map("order_id") @db.Uuid
+  sku            String
+  quantity       Int
+  unitPriceCents BigInt           @map("unit_price_cents")
+  order          IntlOrder        @relation(fields: [orderId], references: [id])
+  product        IntlProduct      @relation(fields: [sku], references: [sku])
+  commissions    IntlCommission[]
+
+  @@unique([orderId, sku])
+  @@map("intl_order_lines")
+}
+
+model IntlPayment {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId     String    @map("order_id") @db.Uuid
+  reference   String
+  amountCents BigInt    @map("amount_cents")
+  paidAt      DateTime  @map("paid_at") @db.Date
+  recordedBy  String    @map("recorded_by")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  order       IntlOrder @relation(fields: [orderId], references: [id])
+
+  @@unique([orderId, reference])
+  @@index([orderId], map: "idx_intl_payments_order")
+  @@map("intl_payments")
+}
+
+model IntlAgent {
+  id              String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fullName        String               @map("full_name")
+  email           String?
+  active          Boolean              @default(true)
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  commissionRules IntlCommissionRule[]
+  commissions     IntlCommission[]
+
+  @@map("intl_agents")
+}
+
+model IntlCommissionRule {
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId   String           @map("client_id") @db.Uuid
+  agentId    String           @map("agent_id") @db.Uuid
+  rateCents  BigInt           @map("rate_cents")
+  currency   String           @default("USD") @db.Char(3)
+  active     Boolean          @default(true)
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  client     IntlClient       @relation(fields: [clientId], references: [id])
+  agent      IntlAgent        @relation(fields: [agentId], references: [id])
+  commissions IntlCommission[]
+
+  @@unique([clientId, agentId])
+  @@map("intl_commission_rules")
+}
+
+model IntlCommission {
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId         String             @map("order_id") @db.Uuid
+  orderLineId     String             @map("order_line_id") @db.Uuid
+  ruleId          String             @map("rule_id") @db.Uuid
+  agentId         String             @map("agent_id") @db.Uuid
+  eligibleQuantity Int               @map("eligible_quantity")
+  rateCents       BigInt             @map("rate_cents")
+  amountCents     BigInt             @map("amount_cents")
+  status          String             @default("PENDING")
+  approvedBy      String?            @map("approved_by")
+  approvedAt      DateTime?          @map("approved_at") @db.Timestamptz(6)
+  payoutReference String?            @map("payout_reference")
+  paidAt          DateTime?          @map("paid_at") @db.Timestamptz(6)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  order           IntlOrder          @relation(fields: [orderId], references: [id])
+  orderLine       IntlOrderLine      @relation(fields: [orderLineId], references: [id])
+  rule            IntlCommissionRule @relation(fields: [ruleId], references: [id])
+  agent           IntlAgent          @relation(fields: [agentId], references: [id])
+
+  @@unique([orderLineId, ruleId])
+  @@index([status, agentId], map: "idx_intl_commissions_status")
+  @@map("intl_commissions")
+}
+
+model IntlAudit {
+  id          BigInt   @id @default(autoincrement())
+  actorUserId String   @map("actor_user_id")
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("intl_audit")
+}
