@@ -560,12 +560,18 @@ model Coupon {
   isActive        Boolean      @default(true) @map("is_active")
   startsAt        DateTime?    @map("starts_at")
   expiresAt       DateTime?    @map("expires_at")
+  source          String       @default("REFFERQ")
+  shopifyDiscountId String?      @map("shopify_discount_id")
+  shopifySummary  String?       @map("shopify_summary")
+  shopifyStatus   String?       @map("shopify_status")
+  shopifySyncedAt DateTime?     @map("shopify_synced_at")
   createdBy       String       @map("created_by")
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
 
   @@index([code])
   @@index([affiliateId])
+  @@index([source])
   @@map("coupons")
 }
 
@@ -701,6 +707,10 @@ model HvCodOrder {
   orderTotalPiasters          Int
   commissionPreviewPiasters   Int
   referralCode                String?
+  affiliateId                 String?  @map("affiliate_id")
+  attributionSource           String   @default("UNVERIFIED") @map("attribution_source")
+  discountCode                String?  @map("discount_code")
+  attributionKey              String?  @map("attribution_key")
   isCod                       Boolean  @default(false)
   cancelled                   Boolean  @default(false)
   refunded                    Boolean  @default(false)
@@ -718,6 +728,8 @@ model HvCodOrder {
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
 
+  @@index([affiliateId, shopifyUpdatedAt])
+  @@index([attributionSource])
   @@map("hv_cod_orders")
 }
 

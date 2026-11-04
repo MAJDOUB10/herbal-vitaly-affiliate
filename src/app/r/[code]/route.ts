@@ -1,36 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-
-// ─── Open Redirect Protection ─────────────────────────────────
-function isAllowedRedirectUrl(url: string, appUrl: string, websiteUrl?: string): boolean {
-  try {
-    const parsed = new URL(url);
-    const appParsed = new URL(appUrl);
-
-    // Always allow the app domain and its subdomains
-    const allowedDomains = [appParsed.hostname];
-
-    // Also allow the marketing site domain if defined
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    if (siteUrl) {
-      try { allowedDomains.push(new URL(siteUrl).hostname); } catch (_e) { }
-    }
-
-    // IMPORTANT: Allow the program's configured website URL
-    if (websiteUrl) {
-      try { allowedDomains.push(new URL(websiteUrl).hostname); } catch (_e) { }
-    }
-
-    return (
-      (parsed.protocol === 'https:' || parsed.protocol === 'http:') &&
-      allowedDomains.some(domain =>
-        parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`)
-      )
-    );
-  } catch (_e) {
-    return false;
-  }
-}
+import { signHvAttribution, shopifyAffiliateDestination } from '@/lib/hv-shopify-attribution';
 
 export async function GET(
   request: NextRequest,
@@ -40,20 +10,10 @@ export async function GET(
     const { code } = await params;
     const referralCode = code;
     const searchParams = request.nextUrl.searchParams;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.refferq.com';
-
-    // Support both 'target' and 'dest' (Plan called it 'dest')
+    // The partner always lands on the actual Shopify shop, never the dashboard.
+    // Deep links are only allowed to the same Herbal Vitaly storefront.
     const rawTarget = searchParams.get('dest') || searchParams.get('target');
-
-    // Fetch ProgramSettings to get the allowed websiteUrl (for domain validation)
-    // We'll use the cached method from DatabaseService if possible, or just query prisma
-    const settings = await prisma.programSettings.findFirst();
-    const websiteUrl = settings?.websiteUrl;
-
-    // Validate redirect target to prevent open redirect attacks
-    const targetUrl = (rawTarget && isAllowedRedirectUrl(rawTarget, appUrl, websiteUrl))
-      ? rawTarget
-      : websiteUrl || appUrl; // Fallback to program website or app URL
+    const targetUrl = shopifyAffiliateDestination(rawTarget).toString();
 
     // Find affiliate by referral code using Prisma
     const affiliate = await prisma.affiliate.findUnique({
@@ -61,7 +21,7 @@ export async function GET(
       include: { user: true }
     });
 
-    if (!affiliate) {
+    if (!affiliate || affiliate.user.status !== 'ACTIVE') {
       // Invalid referral code - redirect to default URL
       return NextResponse.redirect(targetUrl);
     }
@@ -83,7 +43,7 @@ export async function GET(
     });
 
     // Generate attribution key
-    const attributionKey = `attr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const attributionKey = `attr_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
     // Find or create a referral record for click tracking
     let referral = await prisma.referral.findFirst({
@@ -130,19 +90,36 @@ export async function GET(
       }
     });
 
+    // A signed token is carried to Shopify and later verified against the
+    // authenticated orders webhook. Never trust unsigned query parameters for payout.
+    const attributionSecret = process.env.HV_ATTRIBUTION_SECRET || process.env.JWT_SECRET;
+    if (!attributionSecret) {
+      console.error('Missing attribution signing secret');
+      return NextResponse.redirect(targetUrl);
+    }
+    const hvToken = signHvAttribution({
+      referralCode, attributionKey, issuedAt: Date.now(),
+    }, attributionSecret);
+
     // Create redirect response with attribution cookie
     const redirectUrl = new URL(targetUrl);
 
     // Preserve existing search params on the target URL (important for deep linking)
     searchParams.forEach((value, key) => {
       // Don't override existing ref/attr if they happen to be there, and don't pass dest/target again
-      if (!['ref', 'attr', 'dest', 'target'].includes(key)) {
+      if (!['ref', 'attr', 'dest', 'target', 'hv_ref', 'hv_attr', 'hv_token'].includes(key)) {
         redirectUrl.searchParams.set(key, value);
       }
     });
 
     redirectUrl.searchParams.set('ref', referralCode);
     redirectUrl.searchParams.set('attr', attributionKey);
+    redirectUrl.searchParams.set('hv_ref', referralCode);
+    redirectUrl.searchParams.set('hv_attr', attributionKey);
+    redirectUrl.searchParams.set('hv_token', hvToken);
+    if (!redirectUrl.searchParams.has('utm_source')) redirectUrl.searchParams.set('utm_source', 'herbal_vitaly_affiliate');
+    if (!redirectUrl.searchParams.has('utm_medium')) redirectUrl.searchParams.set('utm_medium', 'partner');
+    if (!redirectUrl.searchParams.has('utm_campaign')) redirectUrl.searchParams.set('utm_campaign', 'affiliate');
 
     const response = NextResponse.redirect(redirectUrl.toString());
 
@@ -166,8 +143,7 @@ export async function GET(
   } catch (error) {
     console.error('Referral tracking error:', error);
 
-    // Fallback redirect on error (safe — always redirects to app URL)
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.refferq.com';
-    return NextResponse.redirect(appUrl);
+    // Fail safely towards the store without claiming attribution.
+    return NextResponse.redirect('https://herbalvitaly.com/');
   }
 }
