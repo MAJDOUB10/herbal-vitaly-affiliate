@@ -1,5 +1,5 @@
-import HvDashboard from '@/components/dashboard/HvDashboard';
+import AdminCommandCenter from '@/components/dashboard/AdminCommandCenter';
 
 export default function AdminDashboardPage() {
-  return <HvDashboard role="ADMIN" />;
+  return <AdminCommandCenter />;
 }
