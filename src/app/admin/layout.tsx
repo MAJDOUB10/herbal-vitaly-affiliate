@@ -54,6 +54,7 @@ import {
   UsersRound,
   Clapperboard,
   Headphones,
+  MessageCircle,
   Layers,
   Landmark,
   Globe2,
@@ -73,6 +74,7 @@ const mainNavItems = [
   { title: 'COD Reconciliation', url: '/admin/cod', icon: Truck },
   { title: 'Invoices', url: '/admin/invoices', icon: FileText },
   { title: 'Emails', url: '/admin/emails', icon: Mail },
+  { title: 'WhatsApp Inbox', url: '/admin/whatsapp', icon: MessageCircle },
   { title: 'Support', url: '/admin/support', icon: Headphones },
 ];
 
