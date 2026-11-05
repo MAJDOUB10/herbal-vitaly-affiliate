@@ -41,6 +41,7 @@ import {
   Wallet,
   BookOpen,
   Headphones,
+  MessageCircle,
   BarChart3,
   Settings,
   LogOut,
@@ -58,6 +59,7 @@ const mainNavItems = [
   { title: 'Returns', url: '/affiliate/returns', icon: RotateCcw },
   { title: 'Commissions & Payouts', url: '/affiliate/payouts', icon: Wallet },
   { title: 'Marketing Resources', url: '/affiliate/resources', icon: BookOpen },
+  { title: 'WhatsApp Chat', url: '/affiliate/whatsapp', icon: MessageCircle },
   { title: 'Support Center', url: '/affiliate/support', icon: Headphones },
   { title: 'Reports', url: '/affiliate/reports', icon: BarChart3, badge: 'BETA' },
 ];

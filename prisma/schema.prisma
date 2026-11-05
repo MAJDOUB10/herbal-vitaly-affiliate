@@ -46,6 +46,7 @@ model Affiliate {
   referrals      Referral[]
   transactions   Transaction[]
   payouts        Payout[]
+  waConversations WaConversation[]
 
   @@map("affiliates")
 }
@@ -1219,4 +1220,42 @@ model IntlAudit {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@map("intl_audit")
+}
+
+
+// WhatsApp Business Cloud API inbox, scoped explicitly to a partner.
+// An inbound sender phone MUST NOT automatically grant access to any affiliate.
+// Admin manually links a conversation to a verified partner.
+model WaConversation {
+  id            String     @id @default(cuid())
+  waId          String     @unique @map("wa_id")
+  displayName   String?    @map("display_name")
+  affiliateId   String?    @map("affiliate_id")
+  affiliate     Affiliate? @relation(fields: [affiliateId], references: [id], onDelete: SetNull)
+  lastInboundAt DateTime?  @map("last_inbound_at")
+  lastMessageAt DateTime   @default(now()) @map("last_message_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  messages      WaMessage[]
+
+  @@index([affiliateId, lastMessageAt])
+  @@index([lastMessageAt])
+  @@map("wa_conversations")
+}
+
+model WaMessage {
+  id              String         @id @default(cuid())
+  conversationId  String         @map("conversation_id")
+  conversation    WaConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  waMessageId     String?        @unique @map("wa_message_id")
+  requestId       String?        @unique @map("request_id")
+  direction       String         // INBOUND or OUTBOUND
+  messageType     String         @default("text") @map("message_type")
+  body            String
+  status          String         @default("RECEIVED")
+  authorUserId    String?        @map("author_user_id")
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  @@index([conversationId, createdAt])
+  @@map("wa_messages")
 }
