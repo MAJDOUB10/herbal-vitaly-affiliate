@@ -40,6 +40,10 @@ export async function GET(request: NextRequest) {
         select:{id:true,direction:true,messageType:true,body:true,status:true,createdAt:true}});
       return NextResponse.json({success:true,conversation:{
         ...conversation,windowOpen:inServiceWindow(conversation.lastInboundAt),
+        partner:conversation.affiliate ? {
+          id:conversation.affiliate.id,name:conversation.affiliate.user.name,
+          referralCode:conversation.affiliate.referralCode,
+        } : null,
         maskedPhone:maskedWhatsAppPhone(conversation.waId),
       }, messages:recent.reverse()},
       {headers:NO_WHATSAPP_CACHE});
