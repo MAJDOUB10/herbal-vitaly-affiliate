@@ -1248,6 +1248,7 @@ model WaMessage {
   conversationId  String         @map("conversation_id")
   conversation    WaConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   waMessageId     String?        @unique @map("wa_message_id")
+  requestId       String?        @unique @map("request_id")
   direction       String         // INBOUND or OUTBOUND
   messageType     String         @default("text") @map("message_type")
   body            String
