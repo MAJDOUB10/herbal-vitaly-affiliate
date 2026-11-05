@@ -102,7 +102,7 @@ test('WhatsApp inbox and partner pages provide actual UX and transparency',()=>{
   assert.ok(adminUi.includes("'/api/admin/whatsapp'"));
   assert.ok(adminUi.includes('crypto.randomUUID()'));
   assert.ok(affiliateUi.includes("'/api/affiliate/whatsapp'"));
-  assert.ok(affiliateUi.includes("'/affiliate/support'"));
+  assert.ok(affiliateUi.includes('href="/affiliate/support"'));
   assert.ok(affiliateUi.includes('Only chats explicitly associated'));
   assert.ok(adminLayout.includes("url: '/admin/whatsapp'"));
   assert.ok(partnerLayout.includes("url: '/affiliate/whatsapp'"));
