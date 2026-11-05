@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS "wa_messages" (
   "id" TEXT NOT NULL PRIMARY KEY,
   "conversation_id" TEXT NOT NULL,
   "wa_message_id" TEXT UNIQUE,
+  "request_id" TEXT UNIQUE,
   "direction" TEXT NOT NULL,
   "message_type" TEXT NOT NULL DEFAULT 'text',
   "body" TEXT NOT NULL,
