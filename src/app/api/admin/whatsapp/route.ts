@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
   if(!admin) return NextResponse.json({error:'Admin access required'},{status:403});
   if(!writable(request)) return NextResponse.json({error:'Production origin required'},{status:403});
   if(!whatsAppReady()) return NextResponse.json({error:'Connect WhatsApp Cloud API first'},{status:423});
-  let requestId: string|null=null;
+  let requestId = '';
   try {
     const input=await request.json();
     const conversationId=typeof input?.conversationId==='string'?input.conversationId:'';
