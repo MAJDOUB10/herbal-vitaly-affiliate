@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
       const firstDiscount = Array.isArray(discounts) ? obj(discounts[0]) : {};
       const status = event === 'orders.deleted' ? 'Deleted' : str(entity.status);
       await client.query(
-        \`INSERT INTO hv_vondera_orders
+        `INSERT INTO hv_vondera_orders
           (store_id,order_id,order_number,status,payment_status,currency,total_piasters,discount_code,referral_code,source_updated_at,last_event_key)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
          ON CONFLICT (store_id,order_id) DO UPDATE SET
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
            source_updated_at = EXCLUDED.source_updated_at,
            last_event_key = EXCLUDED.last_event_key,
            synced_at = now()
-         WHERE EXCLUDED.source_updated_at >= hv_vondera_orders.source_updated_at\`,
+         WHERE EXCLUDED.source_updated_at >= hv_vondera_orders.source_updated_at`,
         [storeId, resourceId, str(entity.orderNumber ?? entity.orderName),
          status, str(entity.paymentStatus ?? payment.paymentStatus),
          str(payment.currency ?? entity.currency) ?? 'EGP',
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
       );
     } else if (resourceId && event.startsWith('products.')) {
       await client.query(
-        \`INSERT INTO hv_vondera_products
+        `INSERT INTO hv_vondera_products
           (store_id,product_id,title,currency,price_piasters,quantity,source_updated_at,last_event_key)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
          ON CONFLICT (store_id,product_id) DO UPDATE SET
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
            source_updated_at = EXCLUDED.source_updated_at,
            last_event_key = EXCLUDED.last_event_key,
            synced_at = now()
-         WHERE EXCLUDED.source_updated_at >= hv_vondera_products.source_updated_at\`,
+         WHERE EXCLUDED.source_updated_at >= hv_vondera_products.source_updated_at`,
         [storeId, resourceId, str(entity.name ?? entity.arabicName ?? entity.title),
          str(entity.currency) ?? 'EGP', piasters(entity.price),
          num(entity.quantity), updatedAt, key]
