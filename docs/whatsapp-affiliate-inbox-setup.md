@@ -15,6 +15,11 @@ WhatsApp / WhatsApp Business mobile apps.
   Meta callback with verify-token handshake, HMAC-SHA256 signature verification and
   message-ID deduplication. No affiliate session is required at this callback.
 - Status sync for SENT, DELIVERED, READ and FAILED events.
+- Coexistence app messages received through `smb_message_echoes` are mirrored as
+  outbound messages, deduplicated and do not open the 24-hour reply window.
+- Subscribing to `smb_message_echoes` in Meta is required for app-originated messages.
+  Existing history and contact backfill (`history`, `smb_app_state_sync`) are
+  **not implemented yet** and must not be promised until tested separately.
 - No automatic campaign sends, no templates, no financial operations.
 - Non-text media are represented by a placeholder, not automatically downloaded.
 
