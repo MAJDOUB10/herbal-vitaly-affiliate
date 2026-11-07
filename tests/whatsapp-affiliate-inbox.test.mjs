@@ -122,3 +122,15 @@ test('additive DB migration has exclusive message IDs and per-affiliate relation
   assert.ok(!migration.includes('DROP TABLE'));
   assert.ok(!migration.includes('ALTER TABLE "affiliates" DROP'));
 });
+
+
+test('webhook verification can run before enabling inbound and outbound messaging',()=>{
+  const getHandler=webhook.split('export async function GET(')[1]?.split('export async function POST(')[0] || '';
+  assert.ok(getHandler.includes('hub.verify_token'), 'GET must require the Meta verify token');
+  assert.ok(getHandler.includes('hub.mode'), 'GET must require subscribe mode');
+  assert.ok(!getHandler.includes("process.env.HV_WHATSAPP_ENABLED !== 'true'"),
+    'GET verification must not require production messaging activation');
+  const postHandler=webhook.split('export async function POST(')[1] || '';
+  assert.ok(postHandler.includes("process.env.HV_WHATSAPP_ENABLED !== 'true'"),
+    'POST remains disabled until all production credentials and QA are complete');
+});
