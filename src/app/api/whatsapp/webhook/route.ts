@@ -12,7 +12,10 @@ export async function GET(request: NextRequest) {
   const url = request.nextUrl.searchParams;
   const token = process.env.HV_WHATSAPP_VERIFY_TOKEN;
   const challenge = url.get('hub.challenge');
-  if (process.env.HV_WHATSAPP_ENABLED !== 'true' || !token ||
+  // Allow Meta to verify the callback before WhatsApp messaging is enabled.
+  // The token challenge is authenticated; POST processing remains disabled
+  // until the full production configuration is explicitly activated.
+  if (!token ||
       url.get('hub.mode') !== 'subscribe' || url.get('hub.verify_token') !== token ||
       !challenge || !/^\d{1,40}$/.test(challenge)) {
     return new NextResponse('Forbidden', { status: 403 });
