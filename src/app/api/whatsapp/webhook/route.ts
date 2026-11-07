@@ -27,6 +27,8 @@ type WaChange = {
     contacts?: Array<{ wa_id?: string; profile?: { name?: string } }>;
     messages?: Array<{ id?: string; from?: string; type?: string; timestamp?: string;
       text?: { body?: string } }>;
+    message_echoes?: Array<{ id?: string; from?: string; to?: string;
+      type?: string; timestamp?: string; text?: { body?: string } }>;
     statuses?: Array<{ id?: string; status?: string }>;
   };
 };
@@ -55,8 +57,44 @@ export async function POST(request: NextRequest) {
     for (const entry of (event.entry || []).slice(0,15)) {
       for (const change of (entry.changes || []).slice(0,15)) {
         const value = change.value;
-        if (change.field !== 'messages' || !value ||
-            value.metadata?.phone_number_id !== process.env.HV_WHATSAPP_PHONE_NUMBER_ID) continue;
+        if (!value || value.metadata?.phone_number_id !== process.env.HV_WHATSAPP_PHONE_NUMBER_ID ||
+            (change.field !== 'messages' && change.field !== 'smb_message_echoes')) continue;
+        // Coexistence: an SMB app echo is an OUTBOUND message, not an inbound
+        // customer message. It must never open or extend the 24h reply window.
+        if (change.field === 'smb_message_echoes') {
+          for (const echo of (value.message_echoes || []).slice(0, 100)) {
+            if (!echo.id || !/^wamid\./.test(echo.id)) continue;
+            const waId = normalizeWaId(echo.to);
+            if (!waId) continue;
+            const stamp = Number(echo.timestamp);
+            const sentAt = Number.isFinite(stamp) && stamp > 0 &&
+              stamp * 1000 <= Date.now() + 60_000
+              ? new Date(stamp * 1000) : new Date();
+            const kind = typeof echo.type === 'string' ? echo.type.slice(0, 32) : 'unknown';
+            const body = kind === 'text' && typeof echo.text?.body === 'string'
+              ? echo.text.body.slice(0, 4096)
+              : '[WhatsApp Business app ' + kind + ' message — open WhatsApp to view]';
+            const conversation = await prisma.waConversation.upsert({
+              where: { waId }, update: {},
+              create: { waId, lastMessageAt: sentAt }, select: { id: true },
+            });
+            const inserted = await prisma.waMessage.createMany({
+              data: [{
+                conversationId: conversation.id, waMessageId: echo.id,
+                direction: 'OUTBOUND', messageType: kind, body,
+                status: 'SENT', createdAt: sentAt,
+              }],
+              skipDuplicates: true,
+            });
+            if (inserted.count > 0) {
+              await prisma.waConversation.updateMany({
+                where: { id: conversation.id, lastMessageAt: { lt: sentAt } },
+                data: { lastMessageAt: sentAt },
+              });
+            }
+          }
+          continue;
+        }
         const contactNames = new Map((value.contacts||[]).map(c=>[c.wa_id||'',
           typeof c.profile?.name==='string'?c.profile.name.trim().slice(0,90):'']));
         for(const msg of (value.messages||[]).slice(0,100)) {
