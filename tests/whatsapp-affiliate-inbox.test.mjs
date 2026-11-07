@@ -122,3 +122,17 @@ test('additive DB migration has exclusive message IDs and per-affiliate relation
   assert.ok(!migration.includes('DROP TABLE'));
   assert.ok(!migration.includes('ALTER TABLE "affiliates" DROP'));
 });
+
+
+test('Coexistence SMB app echoes are outbound and never extend the reply window',()=>{
+  assert.ok(webhook.includes("change.field === 'smb_message_echoes'"));
+  assert.ok(webhook.includes("value.message_echoes || []"));
+  const echoBranch=webhook.split("if (change.field === 'smb_message_echoes') {")[1]
+    ?.split("const contactNames =")[0] || '';
+  for(const expected of [
+    "normalizeWaId(echo.to)", "waMessageId: echo.id",
+    "direction: 'OUTBOUND'", "status: 'SENT'",
+    "skipDuplicates: true", "lastMessageAt: sentAt",
+  ]) assert.ok(echoBranch.includes(expected),expected);
+  assert.ok(!echoBranch.includes('lastInboundAt'), 'app echoes must not extend the customer reply window');
+});
