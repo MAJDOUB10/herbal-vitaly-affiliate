@@ -66,6 +66,7 @@ const mainNavItems = [
   { title: 'E-commerce Performance', url: '/admin/performance', icon: BarChart3 },
   { title: 'International Sales', url: '/admin/international', icon: Globe2 },
   { title: 'Partners', url: '/admin/partners', icon: Users },
+  { title: 'Partner Networks', url: '/admin/partner-networks', icon: UsersRound },
   { title: 'Partner CRM / UGC', url: '/admin/ugc-crm', icon: Clapperboard },
   { title: 'Customers', url: '/admin/customers', icon: UserCheck },
   { title: 'Orders', url: '/admin/orders', icon: ShoppingBag },

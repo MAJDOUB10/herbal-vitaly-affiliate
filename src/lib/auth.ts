@@ -20,6 +20,7 @@ export interface RegisterData {
   password: string;
   name: string;
   role: string; // 'affiliate' or 'admin' from the form
+  invitationToken?: string;
 }
 
 class AuthService {
@@ -42,11 +43,32 @@ class AuthService {
       if (existingUser) return { success: false, message: 'An account with this email already exists. Sign in or request another code.' };
       const hashedPassword = await bcrypt.hash(data.password, 12);
       const user = await prisma.$transaction(async tx => {
+        let invite: { masterAffiliateId: string; shareBps: number } | null = null;
+        if (data.invitationToken) {
+          const tokenHash = crypto.createHash('sha256').update(data.invitationToken).digest('hex');
+          const record = await tx.teamInvitation.findUnique({
+            where: { tokenHash }, include: { master: { include: { user: true } } },
+          });
+          if (!record || record.email !== email || record.usedAt ||
+              record.expiresAt <= new Date() || !record.master.isMasterPartner ||
+              record.master.parentAffiliateId || record.master.user.role !== 'AFFILIATE' ||
+              record.master.user.status !== 'ACTIVE' || !record.master.user.emailVerifiedAt ||
+              !Number.isInteger(record.shareBps) || record.shareBps < 0 || record.shareBps > 10000) {
+            throw new Error('INVALID_TEAM_INVITATION');
+          }
+          const claimed = await tx.teamInvitation.updateMany({
+            where: { id: record.id, usedAt: null, expiresAt: { gt: new Date() } },
+            data: { usedAt: new Date() },
+          });
+          if (claimed.count !== 1) throw new Error('INVITATION_ALREADY_USED');
+          invite = { masterAffiliateId: record.masterAffiliateId, shareBps: record.shareBps };
+        }
         const created = await tx.user.create({
           data: { email, name: data.name.trim(), password: hashedPassword, role: 'AFFILIATE', status: 'PENDING' },
         });
         await tx.affiliate.create({
-          data: { userId: created.id, referralCode: this.generateReferralCode(data.name), payoutDetails: {}, balanceCents: 0 },
+          data: { userId: created.id, referralCode: this.generateReferralCode(data.name), payoutDetails: {}, balanceCents: 0,
+            parentAffiliateId: invite?.masterAffiliateId || null, teamShareBps: invite?.shareBps ?? null },
         });
         return created;
       });
