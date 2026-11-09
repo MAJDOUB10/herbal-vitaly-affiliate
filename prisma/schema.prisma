@@ -39,6 +39,14 @@ model Affiliate {
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
   partnerGroupId String?       @map("partner_group_id")
+  isMasterPartner Boolean @default(false) @map("is_master_partner")
+  parentAffiliateId String? @map("parent_affiliate_id")
+  teamShareBps Int? @map("team_share_bps")
+  parentAffiliate Affiliate? @relation("AffiliateHierarchy", fields: [parentAffiliateId], references: [id], onDelete: Restrict)
+  subPartners Affiliate[] @relation("AffiliateHierarchy")
+  teamInvitations TeamInvitation[]
+  teamMasterSplits TeamCommissionSplit[] @relation("TeamSplitMaster")
+  teamChildSplits TeamCommissionSplit[] @relation("TeamSplitChild")
   partnerGroup   PartnerGroup? @relation(fields: [partnerGroupId], references: [id])
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   commissions    Commission[]
@@ -48,7 +56,49 @@ model Affiliate {
   payouts        Payout[]
   waConversations WaConversation[]
 
+  @@index([parentAffiliateId])
   @@map("affiliates")
+}
+
+
+model TeamInvitation {
+  id String @id @default(cuid())
+  masterAffiliateId String @map("master_affiliate_id")
+  email String
+  shareBps Int @map("share_bps")
+  tokenHash String @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  usedAt DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  master Affiliate @relation(fields: [masterAffiliateId], references: [id], onDelete: Restrict)
+
+  @@index([masterAffiliateId, createdAt])
+  @@index([email, expiresAt])
+  @@map("team_invitations")
+}
+
+// Allocations are reserved for a future audited settlement worker.
+// Preview endpoints do not write into this ledger.
+model TeamCommissionSplit {
+  id String @id @default(cuid())
+  sourceType String @map("source_type")
+  sourceId String @map("source_id")
+  masterAffiliateId String @map("master_affiliate_id")
+  childAffiliateId String @map("child_affiliate_id")
+  currency String @default("EGP")
+  totalPiasters BigInt @map("total_piasters")
+  childPiasters BigInt @map("child_piasters")
+  masterPiasters BigInt @map("master_piasters")
+  shareBps Int @map("share_bps")
+  status String @default("PENDING")
+  createdAt DateTime @default(now()) @map("created_at")
+  master Affiliate @relation("TeamSplitMaster",fields:[masterAffiliateId],references:[id],onDelete:Restrict)
+  child Affiliate @relation("TeamSplitChild",fields:[childAffiliateId],references:[id],onDelete:Restrict)
+
+  @@unique([sourceType, sourceId])
+  @@index([masterAffiliateId, status])
+  @@index([childAffiliateId, status])
+  @@map("team_commission_splits")
 }
 
 model Referral {

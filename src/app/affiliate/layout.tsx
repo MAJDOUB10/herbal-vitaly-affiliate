@@ -52,6 +52,10 @@ import {
 const mainNavItems = [
   { title: 'Dashboard', url: '/affiliate', icon: LayoutDashboard },
   { title: 'Referrals', url: '/affiliate/referrals', icon: Users },
+  { title: 'My Team', url: '/affiliate/team', icon: Users },
+  { title: 'Team Commissions', url: '/affiliate/team/commissions', icon: Wallet },
+  { title: 'Team Payouts', url: '/affiliate/team/payouts', icon: Wallet },
+  { title: 'Team Analytics', url: '/affiliate/team/analytics', icon: BarChart3 },
   { title: 'Orders', url: '/affiliate/orders', icon: ShoppingBag },
   { title: 'My Coupons', url: '/affiliate/coupons', icon: Ticket },
   { title: 'Product Links', url: '/affiliate/product-links', icon: Package },

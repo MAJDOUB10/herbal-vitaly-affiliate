@@ -19,6 +19,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     const password = body.password;
+    const invitationToken = body.invitationToken;
+    if (invitationToken !== undefined && (typeof invitationToken !== 'string' || !/^[0-9a-f]{64}$/.test(invitationToken))) {
+      return NextResponse.json({ success: false, message: 'Invalid team invitation' }, { status: 400 });
+    }
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
     if (name.length < 2 || name.length > 100 || email.length > 254 ||
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -37,6 +41,7 @@ export async function POST(request: NextRequest) {
       ? await prisma.user.count({ where: { role: 'ADMIN' } })
       : 0;
 
+    if (adminAddress && invitationToken) return NextResponse.json({ success: false, message: 'Administrator accounts cannot join via team invitations' }, { status: 403 });
     if (adminAddress) {
       if (!canBootstrapFirstAdmin({
         email,
@@ -64,7 +69,7 @@ export async function POST(request: NextRequest) {
       // Ordinary public registration is always an affiliate, never an admin.
       const created = await auth.register({
         name, email, role: 'AFFILIATE',
-        password,
+        password, invitationToken,
       });
       if (!created.success) {
         return NextResponse.json({ success: false, message: created.message }, { status: 400 });
