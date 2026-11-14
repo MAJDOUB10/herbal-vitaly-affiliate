@@ -71,10 +71,11 @@ export function allocateWeeklyPool(
   }
   if (parentId === affiliateId) throw new Error('Self-referral hierarchy');
   const split = splitTeamCommissionPiasters(poolPiasters, shareBps);
-  return [
+  const allocations: WeeklyAllocation[] = [
     { beneficiaryAffiliateId: affiliateId, beneficiaryRole: 'SUB_PARTNER', amountPiasters: split.childPiasters, shareBps },
     { beneficiaryAffiliateId: parentId, beneficiaryRole: 'MASTER_PARTNER', amountPiasters: split.masterPiasters, shareBps: 10000 - shareBps },
-  ].filter(part => part.amountPiasters > 0);
+  ];
+  return allocations.filter(part => part.amountPiasters > 0);
 }
 
 export function isWeeklyTransitionAllowed(current: string, action: string): boolean {
