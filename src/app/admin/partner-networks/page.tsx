@@ -130,7 +130,7 @@ export default function PartnerNetworksPage() {
         key={selectedMasterId || 'free'}
         contextLabel={selectedMaster ? 'Réseau de ' + selectedMaster.user.name : 'Simulation libre · aucun Master sélectionné'}
         partners={subPartners}
-        onSaveShare={selectedMaster && !loadingChildren && !busy ? saveSubPartnerRate : undefined}
+        onSaveShare={selectedMaster && !loadingChildren ? saveSubPartnerRate : undefined}
       />
     </section>
 
