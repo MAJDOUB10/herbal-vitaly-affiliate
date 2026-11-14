@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import CommissionSimulator from '@/components/team/CommissionSimulator';
 import { UsersRound, Wallet, ClipboardCopy, ShieldCheck, UserRoundPlus, RefreshCw } from 'lucide-react';
 
 type View = 'team' | 'commissions' | 'payouts' | 'analytics';
@@ -79,6 +80,21 @@ export default function TeamWorkspace({ view }: { view: View }) {
     } catch (e) { setError(e instanceof Error ? e.message : 'Update failed'); }
     finally { setBusy(false); }
   }
+
+  async function saveSimulatorRate(partnerId: string, shareBps: number) {
+    setBusy(true);
+    try {
+      const response = await fetch('/api/affiliate/team', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partnerId, shareBps }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Update failed');
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
   const partners = team?.partners || [];
   const orders = partners.reduce((sum, p) => sum + p.orders, 0);
   const sales = partners.reduce((sum, p) => sum + p.salesPiasters, 0);
@@ -120,6 +136,11 @@ export default function TeamWorkspace({ view }: { view: View }) {
             <p><strong>Estimates only.</strong> Figures are based on Shopify order snapshots.
               They are not approved balances or payable earnings. No transfers are initiated from this module.</p>
           </div>
+          {(view === 'team' || view === 'commissions') && <CommissionSimulator
+            contextLabel="Partage entre Master et sous-partenaire · budget standard de 20 %"
+            partners={partners.map(p => ({ id: p.id, name: p.name, shareBps: p.shareBps }))}
+            onSaveShare={saveSimulatorRate}
+          />}
           {view === 'team' && <>
             <section className="rounded-2xl border bg-white p-5 shadow-sm">
               <h2 className="flex items-center gap-2 text-lg font-semibold"><UserRoundPlus className="h-5 w-5 text-[#1F6B3A]" /> Invite a sub-partner</h2>
