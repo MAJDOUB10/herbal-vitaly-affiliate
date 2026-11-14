@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { splitTeamCommissionPiasters } from '@/lib/team-network-math';
+import { previewTeamCommissionFromSalePiasters } from '@/lib/team-network-math';
 
 export type SimulatorPartner = { id: string; name: string; shareBps: number };
 
@@ -11,7 +11,6 @@ type Props = {
   contextLabel?: string;
 };
 
-const POOL_BPS = 2000; // 20% of eligible sales; never an extra commission.
 const MAX_SALE_EGP = 10_000_000;
 const formatMoney = (piasters: number) =>
   (piasters / 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' EGP';
@@ -35,9 +34,8 @@ export default function CommissionSimulator({ partners = [], onSaveShare, contex
   const validSale = saleInput.trim() !== '' && Number.isFinite(sale) &&
     sale >= 0 && sale <= MAX_SALE_EGP && Math.round(sale * 100) <= Number.MAX_SAFE_INTEGER;
   const salePiasters = validSale ? Math.round(sale * 100) : 0;
-  const poolPiasters = Math.floor(salePiasters * POOL_BPS / 10000);
   const { childPiasters, masterPiasters, totalPiasters } =
-    splitTeamCommissionPiasters(poolPiasters, shareBps);
+    previewTeamCommissionFromSalePiasters(salePiasters, shareBps);
   const changed = Boolean(selectedPartner && selectedPartner.shareBps !== shareBps);
 
   function choosePartner(id: string) {
