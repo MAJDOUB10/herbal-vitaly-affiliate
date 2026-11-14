@@ -90,7 +90,12 @@ export default function TeamWorkspace({ view }: { view: View }) {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Update failed');
-      await load();
+      // Keep the simulator mounted so its success state and selected partner remain visible.
+      setTeam(previous => previous ? {
+        ...previous,
+        partners: previous.partners.map(p => p.id === partnerId ? { ...p, shareBps } : p),
+      } : previous);
+      setRates(previous => ({ ...previous, [partnerId]: String(shareBps / 100) }));
     } finally {
       setBusy(false);
     }
