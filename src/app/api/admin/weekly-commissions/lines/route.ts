@@ -106,7 +106,9 @@ export async function PATCH(request: NextRequest) {
         action === 'CANCEL' ? 'CANCELLED' : action === 'MARK_PAID' ? 'PAID' : 'DRAFT',
         financialStatus: 'REPORT_ONLY_NOT_PAYABLE' };
     });
-    if ('error' in changed) return NextResponse.json({ error: changed.error }, { status: changed.status, headers });
+    if ('error' in changed) return NextResponse.json({ error: changed.error }, {
+      status: typeof changed.status === 'number' ? changed.status : 409, headers,
+    });
     return NextResponse.json(changed, { headers });
   } catch (e) {
     console.error('Weekly commission action failed', e);
