@@ -805,6 +805,58 @@ enum TeamMemberStatus {
 }
 
 
+
+/**
+ * Weekly COD reconciliation report. This is NOT an affiliate balance or a bank payout.
+ * Generation and validation never write to Commission, Payout, Affiliate.balanceCents,
+ * TeamCommissionSplit or the company general ledger.
+ */
+model HvWeeklyCommissionBatch {
+  id          String   @id @default(cuid())
+  weekStart   DateTime @unique @map("week_start")
+  weekEnd     DateTime @map("week_end")
+  currency    String   @default("EGP")
+  createdBy   String?  @map("created_by") // null = authenticated cron
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  lines       HvWeeklyCommissionLine[]
+
+  @@map("hv_weekly_commission_batches")
+}
+
+model HvWeeklyCommissionLine {
+  id                    String   @id @default(cuid())
+  batchId               String   @map("batch_id")
+  sourceOrderId          String   @map("source_order_id")
+  sourceOrderName        String   @map("source_order_name")
+  beneficiaryAffiliateId String   @map("beneficiary_affiliate_id")
+  beneficiaryRole        String   @map("beneficiary_role") // DIRECT, SUB_PARTNER or MASTER_PARTNER
+  salePiasters           Int      @map("sale_piasters")
+  poolPiasters           Int      @map("pool_piasters")
+  originalPiasters       Int      @map("original_piasters")
+  amountPiasters         Int      @map("amount_piasters")
+  shareBps               Int      @map("share_bps") // 0..10000 share of the existing commission pool
+  status                 String   @default("DRAFT")
+  notes                  String?
+  reviewedBy             String?  @map("reviewed_by")
+  reviewedAt             DateTime? @map("reviewed_at")
+  cancelledBy            String?  @map("cancelled_by")
+  cancelledAt            DateTime? @map("cancelled_at")
+  cancellationReason     String?  @map("cancellation_reason")
+  paymentReference       String?  @map("payment_reference")
+  paidBy                 String?  @map("paid_by")
+  paidAt                 DateTime? @map("paid_at")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+  batch                  HvWeeklyCommissionBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+
+  @@unique([sourceOrderId, beneficiaryAffiliateId])
+  @@index([batchId, status])
+  @@index([beneficiaryAffiliateId, status])
+  @@index([sourceOrderId])
+  @@map("hv_weekly_commission_lines")
+}
+
 model HvCodOrder {
   id                          String   @id @default(cuid())
   shopifyOrderId              String   @unique
