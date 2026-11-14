@@ -30,17 +30,15 @@ export async function GET(request: NextRequest) {
       })
     : batches[0];
   const id = selectedBatch?.id;
-  const [lines, groups, total] = id ? await Promise.all([
-    prisma.hvWeeklyCommissionLine.findMany({
-      where: { batchId: id }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-      skip: (page - 1) * 50, take: 50,
-    }),
-    prisma.hvWeeklyCommissionLine.groupBy({
-      by: ['status'], where: { batchId: id },
-      _sum: { amountPiasters: true }, _count: { _all: true },
-    }),
-    prisma.hvWeeklyCommissionLine.count({ where: { batchId: id } }),
-  ]) : [[], [], 0];
+  const lines = id ? await prisma.hvWeeklyCommissionLine.findMany({
+    where: { batchId: id }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    skip: (page - 1) * 50, take: 50,
+  }) : [];
+  const groups = id ? await prisma.hvWeeklyCommissionLine.groupBy({
+    by: ['status'], where: { batchId: id },
+    _sum: { amountPiasters: true }, _count: { _all: true },
+  }) : [];
+  const total = id ? await prisma.hvWeeklyCommissionLine.count({ where: { batchId: id } }) : 0;
 
   const affiliateIds = [...new Set(lines.map(line => line.beneficiaryAffiliateId))];
   const affiliates = affiliateIds.length ? await prisma.affiliate.findMany({
