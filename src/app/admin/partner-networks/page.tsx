@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import CommissionSimulator, { type SimulatorPartner } from '@/components/team/CommissionSimulator';
 
+type Invitation = { id: string; email: string; shareBps: number; expiresAt: string;
+  status: string; eligible: boolean };
+
 type Partner = {
   id: string; isMasterPartner: boolean; referralCode: string;
   user: { name: string; email: string; status: string; emailVerifiedAt: string | null };
@@ -13,6 +16,7 @@ export default function PartnerNetworksPage() {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [selectedMasterId, setSelectedMasterId] = useState('');
   const [subPartners, setSubPartners] = useState<SimulatorPartner[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingChildren, setLoadingChildren] = useState(false);
@@ -43,21 +47,26 @@ export default function PartnerNetworksPage() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Unable to load sub-partners');
-    return (data.subPartners || []) as SimulatorPartner[];
+    return { children: (data.subPartners || []) as SimulatorPartner[],
+      invitations: (data.invitations || []) as Invitation[] };
   }
 
   useEffect(() => { void load(); }, []);
   useEffect(() => {
     if (!selectedMasterId) {
       setSubPartners([]);
+      setInvitations([]);
       setLoadingChildren(false);
       return;
     }
     let cancelled = false;
     setLoadingChildren(true);
     setSubPartners([]);
+    setInvitations([]);
     void fetchSubPartners(selectedMasterId)
-      .then(children => { if (!cancelled) setSubPartners(children); })
+      .then(network => { if (!cancelled) {
+        setSubPartners(network.children); setInvitations(network.invitations);
+      } })
       .catch(e => { if (!cancelled) setError(e instanceof Error ? e.message : 'Unable to load sub-partners'); })
       .finally(() => { if (!cancelled) setLoadingChildren(false); });
     return () => { cancelled = true; };
@@ -91,10 +100,31 @@ export default function PartnerNetworksPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Unable to save sub-partner rate');
-      setSubPartners(await fetchSubPartners(selectedMasterId));
+      const network = await fetchSubPartners(selectedMasterId);
+      setSubPartners(network.children); setInvitations(network.invitations);
     } finally {
       setBusy(false);
     }
+  }
+
+  async function linkInvitedAccount(invitation: Invitation) {
+    if (!selectedMasterId || !invitation.eligible || busy) return;
+    if (!window.confirm('Link ' + invitation.email + ' to the selected Master Partner at ' +
+      (invitation.shareBps / 100) + '% of the Master commission? This affects only future allocations.')) return;
+    setBusy(true); setError('');
+    try {
+      const res = await fetch('/api/admin/partner-networks', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ masterId: selectedMasterId, invitationId: invitation.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to link existing affiliate');
+      const network = await fetchSubPartners(selectedMasterId);
+      setSubPartners(network.children); setInvitations(network.invitations);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to link existing affiliate');
+    } finally { setBusy(false); }
   }
 
   const masters = partners.filter(p => p.isMasterPartner);
@@ -132,6 +162,38 @@ export default function PartnerNetworksPage() {
         partners={subPartners}
         onSaveShare={selectedMaster && !loadingChildren ? saveSubPartnerRate : undefined}
       />
+      {selectedMasterId && <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4">
+        <h2 className="font-semibold text-slate-900">Team invitations · account reconciliation</h2>
+        <p className="mt-1 text-xs text-slate-500">
+          Accounts registered independently can be linked by an administrator only after email verification.
+          Linking keeps the existing account, referral code, and prior order records unchanged.
+        </p>
+        {invitations.length ? <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[580px] text-left text-sm">
+            <thead><tr className="border-b text-slate-500">
+              <th className="py-2">Invited account</th><th className="py-2">Commission share</th>
+              <th className="py-2">Status</th><th className="py-2">Action</th>
+            </tr></thead>
+            <tbody>{invitations.map(invite => <tr key={invite.id} className="border-b">
+              <td className="py-2">{invite.email}</td>
+              <td className="py-2">{invite.shareBps / 100}%</td>
+              <td className="py-2">{({
+                LINKED: 'Linked', READY_TO_LINK: 'Verified account · ready to link',
+                AWAITING_REGISTRATION: 'Awaiting registration',
+                AWAITING_VERIFICATION: 'Awaiting email verification',
+                EXPIRED: 'Expired', NEEDS_REVIEW: 'Needs manual review',
+                NOT_ELIGIBLE: 'Account not eligible',
+              } as Record<string, string>)[invite.status] || invite.status}</td>
+              <td className="py-2">{invite.eligible &&
+                <button type="button" disabled={busy || loadingChildren}
+                  onClick={() => void linkInvitedAccount(invite)}
+                  className="rounded-lg bg-[#1F6B3A] px-3 py-2 font-medium text-white disabled:opacity-40">
+                  Link existing account
+                </button>}</td>
+            </tr>)}</tbody>
+          </table>
+        </div> : <p className="mt-3 text-sm text-slate-500">No invitations for this Master Partner.</p>}
+      </div>}
     </section>
 
     {loading ? <p>Loading...</p> : <div className="overflow-x-auto rounded-xl border bg-white">
