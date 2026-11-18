@@ -32,7 +32,7 @@ async function assignedCoupon(affiliateId: string) {
     ] },
     orderBy: { createdAt: 'asc' },
     select: { code: true, source: true, shopifyStatus: true,
-      isActive: true, autoEmailSentAt: true },
+      shopifyDiscountId: true, isActive: true, autoEmailSentAt: true },
   });
 }
 
@@ -43,13 +43,24 @@ export async function GET(request: NextRequest) {
   try {
     const assigned = await assignedCoupon(partner.affiliateId);
     const policy = await getAutoCouponSettings();
-    if (assigned) return NextResponse.json({
-      success: true, assigned: {
-        code: assigned.code, active: assigned.source === 'SHOPIFY' &&
-          assigned.shopifyStatus === 'ACTIVE' && assigned.isActive,
-        emailSent: Boolean(assigned.autoEmailSentAt),
-      }, enabled: policy.enabled,
-    }, { headers: NO_STORE });
+    if (assigned) {
+      // Do not trust an old Refferq status after the Shopify discount was deleted.
+      const remote = assigned.source === 'SHOPIFY'
+        ? await getShopifyDiscountByCode(assigned.code) : null;
+      const sameShopifyDiscount = Boolean(remote &&
+        (!assigned.shopifyDiscountId || remote.id === assigned.shopifyDiscountId));
+      return NextResponse.json({
+        success: true, assigned: {
+          code: assigned.code,
+          active: assigned.source === 'SHOPIFY' && sameShopifyDiscount &&
+            remote?.status === 'ACTIVE' && assigned.isActive,
+          missingShopify: assigned.source === 'SHOPIFY' && !remote,
+          conflictingShopify: assigned.source === 'SHOPIFY' && Boolean(remote) &&
+            !sameShopifyDiscount,
+          emailSent: Boolean(assigned.autoEmailSentAt),
+        }, enabled: policy.enabled,
+      }, { headers: NO_STORE });
+    }
 
     const proposed = request.nextUrl.searchParams.get('code');
     if (proposed === null)
@@ -65,13 +76,32 @@ export async function GET(request: NextRequest) {
     if (!limit.allowed) return NextResponse.json({ error: 'Too many checks. Try later.' },
       { status: 429, headers: NO_STORE });
     const alreadyLocal = await prisma.coupon.findUnique({
-      where: { code }, select: { id: true },
+      where: { code },
+      select: { affiliateId: true, source: true, discountType: true,
+        discountValue: true, shopifyDiscountId: true, shopifyProductIds: true,
+        expiresAt: true, maxUses: true, usedCount: true },
     });
-    // Fail closed if Shopify is unavailable. Never claim that an unknown code is free.
-    const alreadyShopify = alreadyLocal ? true : Boolean(await getShopifyDiscountByCode(code));
+    // An old Sheets/Refferq code is reusable only by the exact same affiliate.
+    // Deletion from Shopify must NOT free up another affiliate's local code.
+    const sameOwner = alreadyLocal?.affiliateId === partner.affiliateId;
+    const notExpired = !alreadyLocal?.expiresAt || alreadyLocal.expiresAt > new Date();
+    const withinLimit = alreadyLocal?.maxUses == null ||
+      alreadyLocal.usedCount < alreadyLocal.maxUses;
+    const reusable = sameOwner && notExpired && withinLimit &&
+      (alreadyLocal.source === 'REFFERQ' &&
+        alreadyLocal.discountType === 'PERCENTAGE' &&
+        alreadyLocal.discountValue === policy.discountPercent &&
+        !alreadyLocal.shopifyDiscountId ||
+       alreadyLocal.source === 'SHOPIFY' &&
+        alreadyLocal.discountType === 'PERCENTAGE' &&
+        alreadyLocal.discountValue === policy.discountPercent &&
+        alreadyLocal.shopifyProductIds.length > 0);
+    // Always check the live Shopify code, including for a locally owned old code.
+    const alreadyShopify = Boolean(await getShopifyDiscountByCode(code));
+    const available = !alreadyShopify && (!alreadyLocal || reusable);
     return NextResponse.json({
-      success: true, code, available: !alreadyLocal && !alreadyShopify,
-      message: !alreadyLocal && !alreadyShopify ? 'Code available' : 'Code already taken',
+      success: true, code, available,
+      message: available ? 'Code available for your account' : 'Code already taken or requires Admin review',
     }, { headers: NO_STORE });
   } catch {
     return NextResponse.json({ error: 'Unable to verify code availability. Try again.' },
@@ -106,18 +136,19 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       // The remote Shopify mutation might have succeeded before a transient
       // email failure. Read the reservation instead of inviting a second code.
-      const existing = await assignedCoupon(partner.affiliateId);
-      if (existing && existing.code === code) {
-        return NextResponse.json({ success: true, code, active: existing.isActive &&
-          existing.shopifyStatus === 'ACTIVE', emailSent: Boolean(existing.autoEmailSentAt),
-          pending: !existing.isActive || existing.shopifyStatus !== 'ACTIVE',
-          message: 'Code reserved. Shopify/email confirmation may require retry.' },
-        { status: 202, headers: NO_STORE });
-      }
       const message = error instanceof Error ? error.message : 'Code could not be created';
-      const status = /taken|already assigned/i.test(message) ? 409 : 503;
-      return NextResponse.json({ error: status === 409 ? message : 'Shopify verification failed. Try again.' },
-        { status, headers: NO_STORE });
+      const conflict = /taken|already assigned|another account|different discount|Admin review|Contact Admin|different promo code|reserved/i.test(message);
+      if (conflict) return NextResponse.json({ error: message }, { status: 409, headers: NO_STORE });
+      const existing = await assignedCoupon(partner.affiliateId);
+      if (existing && existing.code === code &&
+          (!existing.isActive || existing.shopifyStatus !== 'ACTIVE')) {
+        return NextResponse.json({
+          success: true, code, active: false, emailSent: Boolean(existing.autoEmailSentAt),
+          pending: true, message: 'Code reserved. Shopify confirmation may require retry.',
+        }, { status: 202, headers: NO_STORE });
+      }
+      return NextResponse.json({ error: 'Shopify verification failed. Try again.' },
+        { status: 503, headers: NO_STORE });
     }
     const created = await assignedCoupon(partner.affiliateId);
     if (!created || created.code !== code)
