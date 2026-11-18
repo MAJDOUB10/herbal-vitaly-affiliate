@@ -20,7 +20,10 @@ export default function AffiliateCouponsPage() {
   const [copied, setCopied] = useState('');
   const [preferredCode, setPreferredCode] = useState('');
   const preferredCodeValid = /^[A-Z0-9][A-Z0-9_-]{2,39}$/.test(preferredCode);
-  const [assigned, setAssigned] = useState<{ code: string; active: boolean; emailSent: boolean } | null>(null);
+  const [assigned, setAssigned] = useState<{
+    code: string; active: boolean; emailSent: boolean;
+    missingShopify?: boolean; conflictingShopify?: boolean;
+  } | null>(null);
   const [policyEnabled, setPolicyEnabled] = useState(true);
   const [onboardingLoading, setOnboardingLoading] = useState(true);
   const [availability, setAvailability] = useState<'idle' | 'checking' | 'available' | 'taken' | 'error'>('idle');
@@ -188,15 +191,18 @@ export default function AffiliateCouponsPage() {
             <p className="flex items-center gap-1 text-sm">
               {assigned.active ? <CheckCircle2 className="h-4 w-4 text-green-700" /> :
                 <AlertCircle className="h-4 w-4 text-amber-600" />}
-              {assigned.active ? 'Active in Shopify' : 'Pending Shopify confirmation'}
+              {assigned.conflictingShopify ? 'Shopify code conflict — contact Admin' :
+                assigned.missingShopify ? 'Deleted from Shopify — restore your code' :
+                assigned.active ? 'Active in Shopify' : 'Pending Shopify confirmation'}
               {assigned.active && !assigned.emailSent && ' · Email notification pending'}
             </p>
           </div>
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={() => copy(assigned.code)}>Copy code</Button>
-            {(!assigned.active || !assigned.emailSent) &&
-              <Button type="button" disabled={saving} onClick={retryChosenCode}>
-                {saving ? 'Retrying…' : 'Retry confirmation / email'}
+            {(!assigned.active || !assigned.emailSent) && !assigned.conflictingShopify &&
+              <Button type="button" disabled={saving || !policyEnabled} onClick={retryChosenCode}>
+                {saving ? 'Restoring…' : assigned.missingShopify
+                  ? 'Restore code in Shopify' : 'Retry confirmation / email'}
               </Button>}
           </div>
         </CardContent>
