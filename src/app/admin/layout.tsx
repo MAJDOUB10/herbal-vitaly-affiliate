@@ -65,6 +65,7 @@ const mainNavItems = [
   { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
   { title: 'Finance & Accounting', url: '/admin/finance', icon: Landmark },
   { title: 'E-commerce Performance', url: '/admin/performance', icon: BarChart3 },
+  { title: 'Visitor Intelligence', url: '/admin/visitor-intelligence', icon: Activity },
   { title: 'International Sales', url: '/admin/international', icon: Globe2 },
   { title: 'Partners', url: '/admin/partners', icon: Users },
   { title: 'Partner Networks', url: '/admin/partner-networks', icon: UsersRound },
