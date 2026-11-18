@@ -226,8 +226,8 @@ export async function provisionAffiliateShopifyCoupon(userId: string, requestedC
         isActive: false, shopifyDiscountId: null };
     } else {
       // A different Shopify discount using the same text is NOT proof of ownership.
-      if (coupon.shopifyDiscountId && coupon.shopifyDiscountId !== remote.id)
-        throw new Error('Shopify code belongs to a different discount. Contact Admin');
+      if (!coupon.shopifyDiscountId || coupon.shopifyDiscountId !== remote.id)
+        throw new Error('Shopify code belongs to an unverified discount. Contact Admin');
       if (coupon.shopifyStatus !== remote.status || coupon.isActive !== (remote.status === 'ACTIVE') ||
           coupon.shopifyDiscountId !== remote.id)
         coupon = await prisma.coupon.update({
