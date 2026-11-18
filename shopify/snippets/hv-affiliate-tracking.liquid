@@ -74,3 +74,96 @@ time-limited attribution through checkout to orders/create + orders/updated.
   document.addEventListener('cart:updated', syncCart);
 })();
 </script>
+
+{% comment %}
+Herbal Vitaly Visitor Intelligence (consent-gated analytics).
+Only anonymous events from signed affiliate traffic. NO input text, IP,
+checkout card data, contact details or full query strings are transmitted.
+The storefront is the only supported sender; Shopify pixel sandbox needs
+a separately reviewed installation for checkout-specific events.
+{% endcomment %}
+<script>
+(function () {
+  'use strict';
+  var STORE = 'https://partner.herbalvitaly.com/api/analytics/events';
+  var KEY = 'hv_affiliate_referral_v1';
+  var SESSION = 'hv_visitor_session_v1';
+  var SOURCE = 'hv_visitor_source_v1';
+  var recordedPage = false;
+
+  function consent() {
+    try {
+      return !!(window.Shopify && window.Shopify.customerPrivacy &&
+        typeof window.Shopify.customerPrivacy.analyticsProcessingAllowed === 'function' &&
+        window.Shopify.customerPrivacy.analyticsProcessingAllowed());
+    } catch (e) { return false; }
+  }
+  function randomId() {
+    if (!window.crypto || !window.crypto.getRandomValues) return null;
+    var bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    return Array.prototype.map.call(bytes, function (n) {
+      return n.toString(16).padStart(2, '0');
+    }).join('');
+  }
+  function session() {
+    try {
+      var value = window.sessionStorage.getItem(SESSION);
+      if (/^[a-f0-9]{32}$/.test(value || '')) return value;
+      value = randomId();
+      if (value) window.sessionStorage.setItem(SESSION, value);
+      return value;
+    } catch (e) { return null; }
+  }
+  function signedToken() {
+    try {
+      var saved = JSON.parse(window.localStorage.getItem(KEY) || 'null');
+      if (!saved || !saved.recordedAt || Date.now() - saved.recordedAt > 30*86400*1000) return null;
+      var token = saved.token;
+      return typeof token === 'string' && /^hv1\.[A-Za-z0-9_-]+\.attr_[A-Za-z0-9_]+\.\d{12,15}\.[A-Za-z0-9_-]{43}$/.test(token)
+        ? token : null;
+    } catch (e) { return null; }
+  }
+  function channel() {
+    try {
+      var supplied = new URLSearchParams(window.location.search).get('utm_source');
+      if (supplied && /^[A-Za-z0-9_-]{1,40}$/.test(supplied)) {
+        window.sessionStorage.setItem(SOURCE, supplied.toLowerCase());
+        return supplied.toLowerCase();
+      }
+      var stored = window.sessionStorage.getItem(SOURCE);
+      return stored && /^[a-z0-9_-]{1,40}$/.test(stored) ? stored : null;
+    } catch (e) { return null; }
+  }
+  function record(type) {
+    if (!consent()) return;
+    var token = signedToken(), sid = session(), eventId = randomId();
+    if (!token || !sid || !eventId) return;
+    var body = {
+      consent: true, token: token, sessionId: sid, eventId: eventId,
+      eventType: type, pageUrl: window.location.origin + window.location.pathname,
+      channel: channel()
+    };
+    try {
+      fetch(STORE, {
+        method: 'POST', mode: 'cors', credentials: 'omit',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body), keepalive: true
+      }).catch(function () { /* analytics must never interrupt shopping */ });
+    } catch (e) {}
+  }
+  function initialEvents() {
+    if (recordedPage || !consent() || !signedToken()) return;
+    recordedPage = true;
+    record('PAGE_VIEWED');
+    if (/^\/products\/[a-z0-9-]+\/?$/.test(window.location.pathname))
+      record('PRODUCT_VIEWED');
+    if (/^\/cart\/?$/.test(window.location.pathname)) record('CART_VIEWED');
+  }
+  if (document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', initialEvents, {once:true});
+  else initialEvents();
+  document.addEventListener('visitorConsentCollected', initialEvents);
+  document.addEventListener('cart:updated', function () { record('CART_UPDATED'); });
+})();
+</script>
