@@ -9,7 +9,9 @@ type View = 'team' | 'commissions' | 'payouts' | 'analytics';
 type Partner = { id: string; name: string; email: string; status: string; verified: boolean;
   referralCode: string; shareBps: number; orders: number;
   salesPiasters: number; commissionPoolPreviewPiasters: number };
-type Invite = { id: string; email: string; shareBps: number; expiresAt: string; usedAt: string | null };
+type Invite = { id: string; email: string; shareBps: number; expiresAt: string; usedAt: string | null;
+  registrationState?: 'LINKED' | 'NEEDS_REVIEW' | 'EXPIRED' | 'AWAITING_REGISTRATION' |
+    'AWAITING_VERIFICATION' | 'AWAITING_ADMIN_LINK' | 'NOT_ELIGIBLE' };
 type TeamResult = { partners: Partner[]; invites: Invite[]; financialStatus: string };
 type CommissionRow = { orderId: string; order: string; partner: string; amountPiasters: number;
   childPiasters: number; masterPiasters: number; totalPiasters: number;
@@ -190,7 +192,16 @@ export default function TeamWorkspace({ view }: { view: View }) {
               {team.invites.length ? <ul className="mt-3 space-y-2 text-sm">{team.invites.map(i=>
                 <li key={i.id} className="flex flex-wrap justify-between gap-2 border-b py-2">
                   <span>{i.email} · {i.shareBps / 100}%</span>
-                  <span className="text-slate-500">{i.usedAt ? 'Accepted' : new Date(i.expiresAt).getTime() < Date.now() ? 'Expired' : 'Awaiting registration'}</span>
+                  <span className="text-slate-500">{({
+                    LINKED: 'Linked to your team',
+                    NEEDS_REVIEW: 'Invitation requires admin review',
+                    EXPIRED: 'Expired',
+                    AWAITING_REGISTRATION: 'Awaiting registration',
+                    AWAITING_VERIFICATION: 'Account created · awaiting email verification',
+                    AWAITING_ADMIN_LINK: 'Account created · awaiting admin team link',
+                    NOT_ELIGIBLE: 'Account exists · admin review required',
+                  } as Record<string, string>)[i.registrationState || ''] ||
+                  (i.usedAt ? 'Accepted' : new Date(i.expiresAt).getTime() < Date.now() ? 'Expired' : 'Awaiting registration')}</span>
                 </li>)}</ul> : <p className="mt-2 text-sm text-slate-500">No invitations created.</p>}
             </section>
           </>}
