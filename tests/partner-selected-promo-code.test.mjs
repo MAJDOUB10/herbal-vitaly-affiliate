@@ -62,7 +62,11 @@ test('Shopify and Refferq share a 3–40 character format, with no fixed length 
 test('availability is checked against Shopify and Neon without exposing other partners', () => {
   assert.ok(api.includes("prisma.coupon.findUnique({"));
   assert.ok(api.includes('getShopifyDiscountByCode(code)'));
-  assert.ok(api.includes('available: !alreadyLocal && !alreadyShopify'));
+  assert.ok(api.includes('const available = !alreadyShopify && (!alreadyLocal || reusable)'));
+  assert.ok(api.includes('alreadyLocal.affiliateId === partner.affiliateId'));
+  assert.ok(api.includes("alreadyLocal.source === 'REFFERQ'"));
+  assert.ok(api.includes("alreadyLocal.source === 'SHOPIFY'"));
+  assert.ok(api.includes('await getShopifyDiscountByCode(code)'));
   assert.ok(api.includes("checkRateLimit(partner.userId, 'partner-promo-availability'"));
   assert.ok(ui.includes("setTimeout(async () =>"));
   assert.ok(ui.includes("setAvailability(data.available ? 'available' : 'taken')"));
@@ -87,4 +91,20 @@ test('existing partners keep their assigned Shopify codes and referral identity'
   assert.ok(ui.includes('Your assigned promo code'));
   assert.ok(login.includes("needsPromoCode: Boolean(needsPromoCode)"));
   assert.ok(register.includes("Sign in & choose your code"));
+});
+
+test('deleted Shopify discounts can be recreated for their original partner without reassignment', () => {
+  assert.ok(service.includes("if (coupon.source === 'SHOPIFY')"));
+  assert.ok(service.includes('const remote = await getShopifyDiscountByCode(code)'));
+  assert.ok(service.includes('if (!remote)'));
+  assert.ok(service.includes("source: 'REFFERQ_PENDING', shopifyStatus: 'PENDING'"));
+  assert.ok(service.includes('shopifyDiscountId: null'));
+  assert.ok(service.includes('where: { id: local.id, code: chosenCode, affiliateId, source: \'REFFERQ\' }'));
+  assert.ok(service.includes('local.affiliateId !== affiliateId'));
+  assert.ok(service.includes('coupon.shopifyDiscountId !== remote.id'));
+  assert.ok(api.includes('missingShopify:'));
+  assert.ok(api.includes('conflictingShopify:'));
+  assert.ok(ui.includes('Restore code in Shopify'));
+  assert.ok(!service.includes('prisma.commission.delete'));
+  assert.ok(!service.includes('prisma.payout.update'));
 });
