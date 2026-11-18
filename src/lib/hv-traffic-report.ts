@@ -66,10 +66,10 @@ export async function trafficReport(affiliateIds: string[] | null, days: number)
         distinct:['sessionId'],select:{sessionId:true},take:5001}),
       prisma.hvVisitorEvent.groupBy({
         by:['productHandle'],where:{...eventWhere,eventType:'PRODUCT_VIEWED',
-          productHandle:{not:null}},_count:{_all:true},take:300,
+          productHandle:{not:null}},_count:{_all:true},
       }),
       prisma.hvVisitorEvent.groupBy({by:['channel'],where:eventWhere,
-        _count:{_all:true},take:300}),
+        _count:{_all:true}}),
     ]);
     for (const item of counts) {
       eventCounts[item.eventType] = item._count._all;
