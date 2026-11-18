@@ -122,48 +122,121 @@ export async function provisionAffiliateShopifyCoupon(userId: string, requestedC
       where: { affiliateId, source: 'SHOPIFY', isActive: true },
       select: { code: true },
     });
-    if (assigned)
-      throw new Error('A Shopify promo code is already assigned to your account');
+    if (assigned && assigned.code !== chosenCode)
+      throw new Error('A different Shopify promo code is already assigned to your account');
 
-    // Never adopt a code owned by another account or an existing Shopify
-    // discount, even if its rate and product scope appear compatible.
-    if (await prisma.coupon.findUnique({ where: { code: chosenCode }, select: { id: true } }))
-      throw new Error('This code is already taken. Choose another.');
-    if (await getShopifyDiscountByCode(chosenCode))
-      throw new Error('This code is already taken. Choose another.');
+    // A legacy Sheets/Refferq coupon may be reused ONLY by its existing owner.
+    // Never erase or transfer another partner's coupon to bypass a duplicate.
+    const local = await prisma.coupon.findUnique({ where: { code: chosenCode } });
+    if (local && local.affiliateId !== affiliateId)
+      throw new Error('This code is already assigned to another account');
+    if (local && !['REFFERQ', 'SHOPIFY'].includes(local.source))
+      throw new Error('This code is reserved. Contact Admin to reconcile it');
 
-    const products = await getShopifyProducts();
-    const chosen = settings.productHandles.map(handle => products.find(p => p.handle === handle));
-    if (chosen.some(p => !p))
-      throw new Error('Required active Shopify products are not available');
+    if (local?.source === 'REFFERQ') {
+      if (local.discountType !== 'PERCENTAGE' ||
+          local.discountValue !== settings.discountPercent ||
+          local.shopifyDiscountId ||
+          (local.expiresAt && local.expiresAt <= new Date()) ||
+          (local.maxUses !== null && local.usedCount >= local.maxUses))
+        throw new Error('Existing coupon terms require Admin review before Shopify activation');
+      if (await getShopifyDiscountByCode(chosenCode))
+        throw new Error('This code already exists in Shopify. Contact Admin');
+      const products = await getShopifyProducts();
+      const chosen = settings.productHandles.map(handle => products.find(p => p.handle === handle));
+      if (chosen.some(p => !p))
+        throw new Error('Required active Shopify products are not available');
 
-    try {
-      coupon = await prisma.coupon.create({
+      // Reuse the original database row so historical partner attribution stays intact.
+      const claimed = await prisma.coupon.updateMany({
+        where: { id: local.id, code: chosenCode, affiliateId, source: 'REFFERQ' },
         data: {
-          code: chosenCode, affiliateId, createdBy: user.id,
           description: 'Automatic OTP-verified affiliate onboarding',
-          discountType: 'PERCENTAGE', discountValue: settings.discountPercent, currency: 'EGP',
+          source: 'REFFERQ_PENDING', shopifyStatus: 'PENDING', isActive: false,
           shopifyProductIds: chosen.map(p => p!.id),
           shopifyProductHandles: [...settings.productHandles],
-          source: 'REFFERQ_PENDING', shopifyStatus: 'PENDING',
-          isActive: false, startsAt: new Date(Date.now() - 60_000),
+          shopifySyncedAt: new Date(),
         },
       });
-    } catch (error) {
-      // Unique DB indexes prevent duplicate code assignment and multiple
-      // automatic coupons for one affiliate during concurrent requests.
-      const reserved = await prisma.coupon.findFirst({
-        where: { affiliateId, description: 'Automatic OTP-verified affiliate onboarding' },
-        orderBy: { createdAt: 'asc' },
-      });
-      if (reserved && reserved.code === chosenCode) coupon = reserved;
-      else if (reserved) throw new Error('A different promo code is already assigned to your account');
-      else if (error && typeof error === 'object' && 'code' in error &&
-               error.code === 'P2002') throw new Error('This code is already taken. Choose another.');
-      else throw error;
+      if (claimed.count !== 1) throw new Error('Coupon changed during recovery. Retry');
+      coupon = await prisma.coupon.findUnique({ where: { id: local.id } });
+    } else if (local) {
+      // Existing Shopify mapping for this SAME affiliate: verify it below.
+      coupon = local;
+    } else {
+      if (await getShopifyDiscountByCode(chosenCode))
+        throw new Error('This code is already taken. Choose another.');
+      const products = await getShopifyProducts();
+      const chosen = settings.productHandles.map(handle => products.find(p => p.handle === handle));
+      if (chosen.some(p => !p))
+        throw new Error('Required active Shopify products are not available');
+
+      try {
+        coupon = await prisma.coupon.create({
+          data: {
+            code: chosenCode, affiliateId, createdBy: user.id,
+            description: 'Automatic OTP-verified affiliate onboarding',
+            discountType: 'PERCENTAGE', discountValue: settings.discountPercent, currency: 'EGP',
+            shopifyProductIds: chosen.map(p => p!.id),
+            shopifyProductHandles: [...settings.productHandles],
+            source: 'REFFERQ_PENDING', shopifyStatus: 'PENDING',
+            isActive: false, startsAt: new Date(Date.now() - 60_000),
+          },
+        });
+      } catch (error) {
+        // Keep the original reservation on concurrent requests.
+        const reserved = await prisma.coupon.findFirst({
+          where: { affiliateId, description: 'Automatic OTP-verified affiliate onboarding' },
+          orderBy: { createdAt: 'asc' },
+        });
+        if (reserved && reserved.code === chosenCode) coupon = reserved;
+        else if (reserved) throw new Error('A different promo code is already assigned to your account');
+        else if (error && typeof error === 'object' && 'code' in error &&
+                 error.code === 'P2002') throw new Error('This code is already taken. Choose another.');
+        else throw error;
+      }
     }
   }
+  if (!coupon) throw new Error('Could not confirm coupon reservation');
   const code = coupon.code;
+
+  if (coupon.source === 'SHOPIFY') {
+    // Shopify is authoritative: a deleted remote discount can be recreated
+    // with the same code and same partner, without deleting historical data.
+    const remote = await getShopifyDiscountByCode(code);
+    if (!remote) {
+      if (coupon.discountType !== 'PERCENTAGE' ||
+          coupon.discountValue !== settings.discountPercent ||
+          coupon.shopifyProductIds.length === 0 ||
+          (coupon.expiresAt && coupon.expiresAt <= new Date()) ||
+          (coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses))
+        throw new Error('Existing coupon terms require Admin review before Shopify recovery');
+      const claimed = await prisma.coupon.updateMany({
+        where: {
+          id: coupon.id, affiliateId, code, source: 'SHOPIFY',
+          shopifyDiscountId: coupon.shopifyDiscountId,
+        },
+        data: {
+          source: 'REFFERQ_PENDING', shopifyStatus: 'PENDING',
+          isActive: false, shopifyDiscountId: null, shopifySyncedAt: new Date(),
+        },
+      });
+      if (claimed.count !== 1) return; // Another request is already recovering it.
+      coupon = { ...coupon, source: 'REFFERQ_PENDING', shopifyStatus: 'PENDING',
+        isActive: false, shopifyDiscountId: null };
+    } else {
+      // A different Shopify discount using the same text is NOT proof of ownership.
+      if (coupon.shopifyDiscountId && coupon.shopifyDiscountId !== remote.id)
+        throw new Error('Shopify code belongs to a different discount. Contact Admin');
+      if (coupon.shopifyStatus !== remote.status || coupon.isActive !== (remote.status === 'ACTIVE') ||
+          coupon.shopifyDiscountId !== remote.id)
+        coupon = await prisma.coupon.update({
+          where: { id: coupon.id },
+          data: { shopifyDiscountId: remote.id, shopifyStatus: remote.status,
+            isActive: remote.status === 'ACTIVE', shopifySyncedAt: new Date() },
+        });
+    }
+  }
 
   if (coupon.source === 'REFFERQ_PENDING') {
     // Claim with an atomic lease; a second invocation cannot create a duplicate.
