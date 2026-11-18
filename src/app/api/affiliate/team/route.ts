@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticatedMaster } from '@/lib/team-network-auth';
+import { classifyTeamInvitation } from '@/lib/team-network-invitation-status';
 
 const headers = { 'Cache-Control': 'private, no-store' };
 const verified = ['AFFILIATE_LINK', 'PROMO_CODE', 'LINK_AND_PROMO'];
@@ -29,17 +30,9 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   const invitationStatuses = invites.map(invitation => {
     const account = usersByEmail.get(invitation.email.trim().toLowerCase());
-    const registrationState =
-      account?.affiliate?.parentAffiliateId === master.affiliateId ? 'LINKED' :
-      invitation.usedAt ? 'NEEDS_REVIEW' :
-      invitation.expiresAt <= now ? 'EXPIRED' :
-      !account ? 'AWAITING_REGISTRATION' :
-      account.role !== 'AFFILIATE' || !account.affiliate ||
-        account.affiliate.isMasterPartner || account.affiliate.parentAffiliateId
-        ? 'NOT_ELIGIBLE' :
-      account.status !== 'ACTIVE' || !account.emailVerifiedAt
-        ? 'AWAITING_VERIFICATION' : 'AWAITING_ADMIN_LINK';
-    return { ...invitation, registrationState };
+    const state = classifyTeamInvitation(invitation, account, master.affiliateId, now);
+    return { ...invitation, registrationState:
+      state === 'READY_TO_LINK' ? 'AWAITING_ADMIN_LINK' : state };
   });
   const ids = partners.map(p => p.id);
   const orders = ids.length ? await prisma.hvCodOrder.groupBy({
