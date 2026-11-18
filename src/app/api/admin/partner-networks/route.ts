@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { classifyTeamInvitation } from '@/lib/team-network-invitation-status';
 
 const headers = { 'Cache-Control': 'private, no-store' };
 async function admin(request: NextRequest) {
@@ -44,18 +45,8 @@ export async function GET(request: NextRequest) {
       id: child.id, name: child.user.name, shareBps: child.teamShareBps ?? 0,
     })), invitations: invitations.map(invite => {
       const user = usersByEmail.get(invite.email.trim().toLowerCase());
-      const eligible = !invite.usedAt && invite.expiresAt > now &&
-        user?.role === 'AFFILIATE' && user.status === 'ACTIVE' &&
-        Boolean(user.emailVerifiedAt) && Boolean(user.affiliate) &&
-        !user.affiliate?.isMasterPartner && !user.affiliate?.parentAffiliateId;
-      const status = user?.affiliate?.parentAffiliateId === masterId ? 'LINKED' :
-        invite.usedAt ? 'NEEDS_REVIEW' :
-        invite.expiresAt <= now ? 'EXPIRED' :
-        !user ? 'AWAITING_REGISTRATION' :
-        eligible ? 'READY_TO_LINK' :
-        user.role === 'AFFILIATE' && user.affiliate &&
-          !user.affiliate.parentAffiliateId && !user.emailVerifiedAt
-          ? 'AWAITING_VERIFICATION' : 'NOT_ELIGIBLE';
+      const status = classifyTeamInvitation(invite, user, masterId, now);
+      const eligible = status === 'READY_TO_LINK';
       return { id: invite.id, email: invite.email, shareBps: invite.shareBps,
         expiresAt: invite.expiresAt, status, eligible };
     }) }, { headers });
