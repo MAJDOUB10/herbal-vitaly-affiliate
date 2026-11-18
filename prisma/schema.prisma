@@ -892,6 +892,30 @@ model HvCodOrder {
   @@map("hv_cod_orders")
 }
 
+
+/**
+ * Anonymous, consent-gated storefront events. Affiliate identity is resolved
+ * server-side from a signed click token; no shopper PII or raw IP is stored.
+ * This ledger is analytical only: orders and payouts are managed separately.
+ */
+model HvVisitorEvent {
+  id             String   @id @default(cuid())
+  eventId        String   @unique @map("event_id")
+  affiliateId    String   @map("affiliate_id")
+  attributionKey String   @map("attribution_key")
+  sessionId      String   @map("session_id")
+  eventType      String   @map("event_type")
+  pagePath       String   @map("page_path")
+  productHandle  String?  @map("product_handle")
+  channel        String?  @map("channel")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([affiliateId, createdAt])
+  @@index([affiliateId, eventType, createdAt])
+  @@index([attributionKey])
+  @@map("hv_visitor_events")
+}
+
 model HvCodEvent {
   id          String   @id @default(cuid())
   dedupeKey   String   @unique
