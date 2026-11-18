@@ -16,6 +16,31 @@ export async function GET(request: NextRequest) {
     where: { masterAffiliateId: master.affiliateId }, orderBy: { createdAt: 'desc' }, take: 30,
     select: { id: true, email: true, shareBps: true, expiresAt: true, usedAt: true, createdAt: true },
   });
+  // Registration through Google or the generic signup URL can create the account
+  // without consuming its invitation. Report that distinction instead of claiming
+  // the invited email has not registered.
+  const inviteEmails = [...new Set(invites.map(i => i.email.trim().toLowerCase()))];
+  const invitedUsers = inviteEmails.length ? await prisma.user.findMany({
+    where: { email: { in: inviteEmails } },
+    select: { email: true, role: true, status: true, emailVerifiedAt: true,
+      affiliate: { select: { parentAffiliateId: true, isMasterPartner: true } } },
+  }) : [];
+  const usersByEmail = new Map(invitedUsers.map(u => [u.email.toLowerCase(), u]));
+  const now = new Date();
+  const invitationStatuses = invites.map(invitation => {
+    const account = usersByEmail.get(invitation.email.trim().toLowerCase());
+    const registrationState =
+      account?.affiliate?.parentAffiliateId === master.affiliateId ? 'LINKED' :
+      invitation.usedAt ? 'NEEDS_REVIEW' :
+      invitation.expiresAt <= now ? 'EXPIRED' :
+      !account ? 'AWAITING_REGISTRATION' :
+      account.role !== 'AFFILIATE' || !account.affiliate ||
+        account.affiliate.isMasterPartner || account.affiliate.parentAffiliateId
+        ? 'NOT_ELIGIBLE' :
+      account.status !== 'ACTIVE' || !account.emailVerifiedAt
+        ? 'AWAITING_VERIFICATION' : 'AWAITING_ADMIN_LINK';
+    return { ...invitation, registrationState };
+  });
   const ids = partners.map(p => p.id);
   const orders = ids.length ? await prisma.hvCodOrder.groupBy({
     by: ['affiliateId'], where: { affiliateId: { in: ids },
@@ -32,7 +57,7 @@ export async function GET(request: NextRequest) {
     orders: performance.get(p.id)?._count._all ?? 0,
     salesPiasters: performance.get(p.id)?._sum.orderTotalPiasters ?? 0,
     commissionPoolPreviewPiasters: performance.get(p.id)?._sum.commissionPreviewPiasters ?? 0,
-  })), invites, financialStatus: 'PREVIEW_ONLY_NOT_PAYABLE' }, { headers });
+  })), invites: invitationStatuses, financialStatus: 'PREVIEW_ONLY_NOT_PAYABLE' }, { headers });
 }
 
 export async function PATCH(request: NextRequest) {
