@@ -83,19 +83,18 @@ export async function GET(request: NextRequest) {
     });
     // An old Sheets/Refferq code is reusable only by the exact same affiliate.
     // Deletion from Shopify must NOT free up another affiliate's local code.
-    const sameOwner = alreadyLocal?.affiliateId === partner.affiliateId;
-    const notExpired = !alreadyLocal?.expiresAt || alreadyLocal.expiresAt > new Date();
-    const withinLimit = alreadyLocal?.maxUses == null ||
-      alreadyLocal.usedCount < alreadyLocal.maxUses;
-    const reusable = sameOwner && notExpired && withinLimit &&
-      (alreadyLocal.source === 'REFFERQ' &&
+    const reusable = Boolean(alreadyLocal &&
+      alreadyLocal.affiliateId === partner.affiliateId &&
+      (!alreadyLocal.expiresAt || alreadyLocal.expiresAt > new Date()) &&
+      (alreadyLocal.maxUses == null || alreadyLocal.usedCount < alreadyLocal.maxUses) &&
+      ((alreadyLocal.source === 'REFFERQ' &&
         alreadyLocal.discountType === 'PERCENTAGE' &&
         alreadyLocal.discountValue === policy.discountPercent &&
-        !alreadyLocal.shopifyDiscountId ||
-       alreadyLocal.source === 'SHOPIFY' &&
+        !alreadyLocal.shopifyDiscountId) ||
+       (alreadyLocal.source === 'SHOPIFY' &&
         alreadyLocal.discountType === 'PERCENTAGE' &&
         alreadyLocal.discountValue === policy.discountPercent &&
-        alreadyLocal.shopifyProductIds.length > 0);
+        alreadyLocal.shopifyProductIds.length > 0)));
     // Always check the live Shopify code, including for a locally owned old code.
     const alreadyShopify = Boolean(await getShopifyDiscountByCode(code));
     const available = !alreadyShopify && (!alreadyLocal || reusable);
