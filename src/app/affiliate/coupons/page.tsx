@@ -138,7 +138,7 @@ export default function AffiliateCouponsPage() {
       <p className="text-xs font-semibold uppercase tracking-widest text-primary">Herbal Vitaly Affiliate Hub</p>
       <h1 className="mt-1 text-2xl font-bold">My Shopify Coupons & Product Links</h1>
       <p className="text-sm text-muted-foreground">
-        Share your personal Shopify product-page link with your code in ?ref=. Use the optional tracked link if you also want Refferq click statistics.
+        Share the tracked product link to record affiliate clicks and open the correct Shopify product page with your verified promo code. The direct Shopify link is available as a fallback.
       </p>
     </div>
     {!onboardingLoading && !assigned && policyEnabled && (
@@ -228,28 +228,65 @@ export default function AffiliateCouponsPage() {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-xs font-medium text-muted-foreground">Shopify verified product pages · your discount code: <span className="font-mono font-bold text-[#1F6B3A]">{c.code}</span></p>
-        {c.products.map(p => <div key={p.handle} className="space-y-2 rounded-xl border border-[#E4EBE6] p-3">
-          <a href={p.affiliateLink} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-            {p.title} <ExternalLink className="h-3 w-3"/>
-          </a>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <input readOnly aria-label={'Shopify product link with your promo code for ' + p.handle}
-              className="min-w-0 flex-1 rounded-lg border border-[#E4EBE6] bg-[#F7FAF8] px-3 py-2 font-mono text-xs"
-              value={p.affiliateLink} onFocus={e => e.currentTarget.select()} />
-            <Button type="button" variant="outline" className="gap-2"
-              onClick={() => copy(p.affiliateLink)}>
-              <Copy className="h-4 w-4" /> {copied === p.affiliateLink ? 'Copied' : 'Copy Shopify link'}
-            </Button>
-          </div>
-          {p.trackedLink && <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#E4EBE6] pt-2">
-            <p className="text-xs text-muted-foreground">Optional: use the tracked link to count partner clicks in Refferq before redirecting to this same Shopify product page.</p>
-            <Button type="button" size="sm" variant="ghost" className="gap-2 text-[#1F6B3A]"
-              onClick={() => copy(p.trackedLink!)}>
-              <Copy className="h-3.5 w-3.5" /> {copied === p.trackedLink ? 'Tracked link copied' : 'Copy tracked link'}
-            </Button>
-          </div>}
-        </div>)}
+        {c.products.map(p => {
+          // The /r/ redirect is the click-tracked link. Never treat a bare
+          // Shopify ?ref= discount URL as an attributed referral click.
+          const trackedProductLink = p.trackedLink ||
+            (p.affiliateLink.startsWith('https://partner.herbalvitaly.com/r/') ? p.affiliateLink : null);
+          const directShopifyLink = p.affiliateLink.startsWith('https://herbalvitaly.com/')
+            ? p.affiliateLink : null;
+          return <div key={p.handle} className="space-y-3 rounded-xl border border-[#E4EBE6] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <a href={p.productUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+                {p.title} <ExternalLink className="h-3 w-3"/>
+              </a>
+              {trackedProductLink && <span className="rounded-full bg-[#EAF4ED] px-3 py-1 text-xs font-semibold text-[#1F6B3A]">
+                Tracked link available
+              </span>}
+            </div>
+            {trackedProductLink ? <>
+              <Label htmlFor={'tracked-product-'+c.id+'-'+p.handle} className="text-xs font-semibold text-[#1F6B3A]">
+                Your personal tracked product link
+              </Label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input id={'tracked-product-'+c.id+'-'+p.handle} readOnly
+                  aria-label={'Tracked affiliate link for '+p.handle}
+                  className="min-w-0 flex-1 rounded-lg border border-[#C5DCCB] bg-[#F1F9F3] px-3 py-2 font-mono text-xs"
+                  value={trackedProductLink} onFocus={e => e.currentTarget.select()} />
+                <Button type="button" className="gap-2 bg-[#1F6B3A] hover:bg-[#16522C]"
+                  onClick={() => copy(trackedProductLink)}>
+                  <Copy className="h-4 w-4"/> {copied === trackedProductLink ? 'Tracked link copied' : 'Copy tracked link'}
+                </Button>
+                <Button type="button" variant="outline" className="gap-2" asChild>
+                  <a href={trackedProductLink} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4"/> Test link
+                  </a>
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Records your affiliate referral click before redirecting to this product's Shopify page.
+                Product views and subsequent browser events require the Shopify analytics integration and visitor consent.
+              </p>
+            </> : <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              Tracked link unavailable for this product. Contact support before using this link for click attribution.
+            </p>}
+            {directShopifyLink && <details className="rounded-lg border border-[#E4EBE6] p-3">
+              <summary className="cursor-pointer text-xs font-semibold text-slate-600">
+                Direct Shopify discount link (does not record referral clicks)
+              </summary>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input readOnly aria-label={'Direct Shopify discount link for '+p.handle}
+                  className="min-w-0 flex-1 rounded-lg border border-[#E4EBE6] bg-[#F7FAF8] px-3 py-2 font-mono text-xs"
+                  value={directShopifyLink} onFocus={e => e.currentTarget.select()} />
+                <Button type="button" variant="outline" className="gap-2"
+                  onClick={() => copy(directShopifyLink)}>
+                  <Copy className="h-4 w-4"/> {copied === directShopifyLink ? 'Copied' : 'Copy Shopify link'}
+                </Button>
+              </div>
+            </details>}
+          </div>;
+        })}
       </CardContent>
     </Card>)}
     <p className="text-xs text-muted-foreground">

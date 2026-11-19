@@ -43,14 +43,18 @@ test('optional tracked URL redirects to same Shopify page, records signed click 
     'https://herbalvitaly.com/pages/ushabti-affiliate?ref=TEST03');
 });
 
-test('the main visible link and copy action use direct URL, tracking is optional', () => {
-  assert.ok(page.includes('href={p.affiliateLink}'));
-  assert.ok(page.includes('value={p.affiliateLink}'));
-  assert.ok(page.includes('onClick={() => copy(p.affiliateLink)}'));
-  assert.ok(page.includes('Copy Shopify link'));
-  assert.ok(page.includes('p.trackedLink &&'));
-  assert.ok(page.includes('copy(p.trackedLink!)'));
+test('the main visible product URL is tracked and the direct discount link remains a fallback', () => {
+  assert.ok(page.includes('const trackedProductLink = p.trackedLink ||'));
+  assert.ok(page.includes("p.affiliateLink.startsWith('https://partner.herbalvitaly.com/r/')"));
+  assert.ok(page.includes('value={trackedProductLink}'));
+  assert.ok(page.includes('onClick={() => copy(trackedProductLink)}'));
   assert.ok(page.includes('Copy tracked link'));
-  assert.ok(page.includes('product-page link with your code in ?ref='));
+  assert.ok(page.includes('href={trackedProductLink}'));
+  assert.ok(page.includes('Your personal tracked product link'));
+  assert.ok(page.includes("p.affiliateLink.startsWith('https://herbalvitaly.com/')"));
+  assert.ok(page.includes('value={directShopifyLink}'));
+  assert.ok(page.includes('onClick={() => copy(directShopifyLink)}'));
+  assert.ok(page.includes('Copy Shopify link'));
+  assert.ok(page.includes('does not record referral clicks'));
   assert.ok(!page.includes('https://herbalvitaly.com/pages/ushabti-affiliate?ref=TEST15'));
 });
